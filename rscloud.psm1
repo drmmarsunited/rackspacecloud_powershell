@@ -6,9 +6,9 @@
 
 ## Define Global Variables Needed for API Comms ##
 
-Set-Variable -Name CloudUsername -Value "cloudse2" -Scope Global
+Set-Variable -Name CloudUsername -Value "" -Scope Global
 Set-Variable -Name CloudAPIKey -Value "5adc3b243bf9cb483c96e8e3a55e81ae" -Scope Global
-Set-Variable -Name CloudDDI -Value "501542" -Scope Global
+Set-Variable -Name CloudDDI -Value "" -Scope Global
 Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
 
 ## Define Custom tables for Result Sets
