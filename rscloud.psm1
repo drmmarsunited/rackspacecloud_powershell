@@ -69,7 +69,7 @@ $EndPointTable = @{Expression={$service.name};Label="Name"},
 function Send-RegionError {
     
     ## This is simply writing an error to the console.
-    Write-Host "You have entered an invalid region identifier.  Please run the Get-Endpoints cmdlet to determine available regions for this environment." -ForegroundColor Red
+    Write-Host "You have entered an invalid region identifier.  Please use ORD or DFW." -ForegroundColor Red
 }
 
 
