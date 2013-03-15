@@ -1,7 +1,7 @@
 ## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
 ## Description: PSv3 module for NextGen Rackspace Cloud API interaction ##
-## Version 1.1 ##
+## Version 1.2 ##
 ## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -69,7 +69,7 @@ $EndPointTable = @{Expression={$service.name};Label="Name"},
 function Send-RegionError {
     
     ## This is simply writing an error to the console.
-    Write-Host "You have entered an invalid region identifier.  Please use ORD or DFW." -ForegroundColor Red
+    Write-Host "You have entered an invalid region identifier.  Please run the Get-Endpoints cmdlet to determine available regions for this environment." -ForegroundColor Red
 }
 
 
@@ -1222,12 +1222,14 @@ function Add-CloudLoadBalancer {
         [Parameter(Position=2,Mandatory=$true)]
         [string]$CloudLBProtocol,
         [Parameter(Position=3,Mandatory=$true)]
-        [string]$CloudLBNodeIP,
+        [string]$CloudLBAlgorithm,
         [Parameter(Position=4,Mandatory=$true)]
-        [string]$CloudLBNodePort,
+        [string]$CloudLBNodeIP,
         [Parameter(Position=5,Mandatory=$true)]
-        [string]$CloudLBNodeCondition,
+        [string]$CloudLBNodePort,
         [Parameter(Position=6,Mandatory=$true)]
+        [string]$CloudLBNodeCondition,
+        [Parameter(Position=7,Mandatory=$true)]
         [string]$CloudLBRegion
         )
 
@@ -1238,15 +1240,16 @@ function Add-CloudLoadBalancer {
         Get-AuthToken
 
 [xml]$NewCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-    name="'+$CloudLoadBalancerName+'"
-    port="'+$CloudLBPort+'"
-    protocol="'+$CloudLBProtocol+'">
-    <virtualIps>
-        <virtualIp type="PUBLIC"/>
-    </virtualIps>
-    <nodes>
-        <node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'"/>
-    </nodes>
+	name="'+$CloudLoadBalancerName+'" 
+	port="'+$CloudLBPort+'"
+	protocol="'+$CloudLBProtocol.ToUpper()+'"
+    algorithm="'+$CloudLBAlgorithm.ToUpper()+'">
+	<virtualIps>
+		<virtualIp type="PUBLIC"/>
+	</virtualIps>
+	<nodes>
+		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition.ToUpper()+'"/>
+	</nodes>
 </loadBalancer>'
  
  if ($CloudLBRegion -eq "DFW") {
@@ -1256,8 +1259,8 @@ function Add-CloudLoadBalancer {
 
         Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
 
-        $lbip0 = $NewCloudLBInfo.loadBalancer.virtualIps.virtualIp
-        $nodeip0 = $NewCloudLBInfo.loadBalancer.nodes.node
+        $lbip0 = $NewCloudLB.loadBalancer.virtualIps.virtualIp
+        $nodeip0 = $NewCloudLB.loadBalancer.nodes.node
         
         $lbipfinal = ForEach ($ip in $lbip0)
 	    {
