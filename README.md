@@ -41,5 +41,5 @@ Additional Information
 Help for the commands are going to be built into the module shortly.  Outside of that, I will be maintaining a small wiki here: https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
 
 
-
+This is NOT a Rackspace sponsored project. I am a Solutions Engineer with Rackspace and am writing this script as a personal project and eventual contribution into OpenStack.
 
