@@ -1,15 +1,15 @@
 ## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
-## Description: PSv3 module for NextGen Cloud API interaction ##
+## Description: PSv3 module for NextGen Rackspace Cloud API interaction ##
 ## Version 1.1 ##
 ## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
 
 Set-Variable -Name CloudUsername -Value "" -Scope Global
-Set-Variable -Name CloudAPIKey -Value "5adc3b243bf9cb483c96e8e3a55e81ae" -Scope Global
+Set-Variable -Name CloudAPIKey -Value "" -Scope Global
 Set-Variable -Name CloudDDI -Value "" -Scope Global
-Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
+## THIS VARIABLE WILL NOT BE USED IN V1 - Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
 
 ## Define Custom tables for Result Sets
 $ImageListTable = @{Expression={$_.id};Label="Image ID";width=38}, 
@@ -21,6 +21,23 @@ $ServerListTable = @{Expression={$_.id};Label="Server ID";width=38},
 @{Expression={$_.Name};Label="Server Name";width=40}, 
 @{Expression={$_.Status};Label="Server Status";width=15}, 
 @{Expression={$_.addresses.network.ip.addr};Label="Server IP Addresses";width=200}
+
+$LBListTable = @{Expression={$_.id};Label="CLB ID";width=15}, 
+@{Expression={$_.Name};Label="CLB Name";width=40}, 
+@{Expression={$_.Status};Label="CLB Status";width=15}, 
+@{Expression={$_.Algorithm};Label="CLB Algorithm";width=40}, 
+@{Expression={$_.Port};Label="CLB Port";width=8}, 
+@{Expression={$_.nodeCount};Label="CLB Node Count";width=8}
+
+$LBDetailListTable = @{Expression={$_.id};Label="CLB ID";width=15}, 
+@{Expression={$_.Name};Label="CLB Name";width=40}, 
+@{Expression={$_.Status};Label="CLB Status";width=15}, 
+@{Expression={$_.Algorithm};Label="CLB Algorithm";width=40}, 
+@{Expression={$_.Port};Label="CLB Port";width=8}, 
+@{Expression={$_.nodes.node.address};Label="Node IP";width=50},
+@{Expression={$_.nodes.node.port};Label="Node Port";width=8},
+@{Expression={$_.nodes.node.condition};Label="Node Condition";width=10},
+@{Expression={$_.nodes.node.status};Label="Node Status";width=10}
 
 $FlavorListTable = @{Expression={$_.id};Label="Flavor ID";width=3}, 
 @{Expression={$_.Name};Label="Flavor Name";width=40}, 
@@ -66,6 +83,8 @@ function Send-RegionError {
    7) Display error(s) if an incorrect region is entered or servers do not exist within that region
    #>
 
+## Global Authentication Cmdlets
+
 function Get-AuthToken {
     ## Check for current authentication token and retrieves a new one if needed
         if ((Get-Date) -ge $token.access.token.expires) {
@@ -94,12 +113,8 @@ function Pop-AuthToken() {
     $HeaderDictionary.Add("X-Auth-Token", $finaltoken)
 }
 
-function Get-Endpoints {
-    
-    $token.access.serviceCatalog.service | Select-Object {$_.name,$_.endpoint.region,$_.endpoint.publicURL} | ForEach-Object -Begin {$EndPoints = @{} } `
-                                                            -Process {$EndPoints.Add($_.name,$_.endpoint.region,$_.endpoint.publicURL)} `
-                                                            -End {$EndPoints}
-}
+
+## Cloud Server API Cmdlets
 
 function Get-CloudServerImages {
     
@@ -334,8 +349,6 @@ else {
     }
 }
 
-
-
 function Add-CloudServer {
     
     Param(
@@ -443,8 +456,6 @@ else {
     }
 
 }
-
-
 
 function Update-CloudServer {
 
@@ -859,8 +870,6 @@ elseif ($CloudServerRegion -eq "ORD") {
 
 }
 
-
-
 function Remove-CloudServer { 
 
     Param(
@@ -938,8 +947,6 @@ else {
     Send-RegionError
     }
 }
-
-
 
 function Set-CloudServerRescueMode {
     
@@ -1042,6 +1049,271 @@ else {
     
     Send-RegionError
 
+    }
+
+}
+
+
+## Cloud Load Balancer API Cmdlets
+
+function Get-CloudLoadBalancers{
+
+    Param(
+        [Parameter (Position=0, Mandatory=$false)]
+        [string] $CloudLBRegion
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($CloudLBRegion -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available servers and storing data into a variable
+    [xml]$LBListStep0 = (Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary)
+    [xml]$LBListFinal = ($LBListStep0.innerxml)
+
+    ## Handling empty response bodies indicating that no servers exist in the queried data center
+    if ($LBListFinal.loadBalancers.loadBalancer -eq $null) {
+
+        Write-Host "You do not currently have any Cloud Load Balancers provisioned in the DFW region."
+
+    }
+    
+    ## See first "if" block for notes on each line##
+    else {
+        
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $LBListFinal.loadBalancers.loadBalancer | Sort-Object Name | ft $LBListTable -AutoSize
+
+    }
+
+}
+
+elseif ($CloudLBRegion -eq "ORD") {  
+    
+    Get-AuthToken
+
+    [xml]$LBListStep0 = (Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary)
+    [xml]$LBListFinal = ($LBListStep0.innerxml)
+
+    if ($LBListFinal.loadBalancers.loadBalancer -eq $null) {
+
+        Write-Host "You do not currently have any Cloud Load Balancers provisioned in the ORD region."
+
+    }
+    
+    else {
+
+        $LBListFinal.loadBalancers.loadBalancer | Sort-Object Name | ft $LBListTable -AutoSize
+
+    }
+
+}
+
+else {
+
+    Send-RegionError
+    }
+}
+
+function Get-CloudLoadBalancerDetails {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLoadBalancerID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$CloudLoadBalancerRegion
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWLBDetailURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID.xml"
+        Set-Variable -Name ORDLBDetailURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID.xml"
+
+    if ($CloudLoadBalancerRegion -eq "DFW") {
+
+    Get-AuthToken
+
+    [xml]$LBDetailStep0 = (Invoke-RestMethod -Uri $DFWLBDetailURI  -Headers $HeaderDictionary -Method Get)
+    [xml]$LBDetailFinal = ($LBDetailStep0.innerxml)
+
+    ## Handling empty response bodies indicating that no servers exist in the queried data center
+    if ($LBDetailFinal.loadBalancer -eq $null) {
+
+        Write-Host "You have entered an incorrect Cloud Load Balancer ID."
+
+    }
+
+        $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
+        $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
+        
+        $lbipfinal = ForEach ($ip in $lbip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+        $nodeipfinal = ForEach ($ip in $nodeip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
+
+    $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+
+    }
+
+    elseif ($CloudLoadBalancerRegion -eq "ORD") {
+
+    Get-AuthToken
+
+    [xml]$LBDetailStep0 = (Invoke-RestMethod -Uri $ORDLBDetailURI  -Headers $HeaderDictionary -Method Get)
+    [xml]$LBDetailFinal = ($LBDetailStep0.innerxml)
+
+    ## Handling empty response bodies indicating that no servers exist in the queried data center
+    if ($LBDetailFinal.loadBalancer -eq $null) {
+
+        Write-Host "You have entered an incorrect Cloud Load Balancer ID."
+
+    }
+    
+    $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
+        $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
+        
+        $lbipfinal = ForEach ($ip in $lbip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+        $nodeipfinal = ForEach ($ip in $nodeip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
+
+    $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+
+    }
+
+    else {
+
+    Send-RegionError
+
+    }
+
+}
+
+function Add-CloudLoadBalancer {
+    
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLoadBalancerName,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$CloudLBPort,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$CloudLBProtocol,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$CloudLBNodeIP,
+        [Parameter(Position=4,Mandatory=$true)]
+        [string]$CloudLBNodePort,
+        [Parameter(Position=5,Mandatory=$true)]
+        [string]$CloudLBNodeCondition,
+        [Parameter(Position=6,Mandatory=$true)]
+        [string]$CloudLBRegion
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWNewLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+        Set-Variable -Name ORDNewLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+
+        Get-AuthToken
+
+[xml]$NewCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+    name="'+$CloudLoadBalancerName+'"
+    port="'+$CloudLBPort+'"
+    protocol="'+$CloudLBProtocol+'">
+    <virtualIps>
+        <virtualIp type="PUBLIC"/>
+    </virtualIps>
+    <nodes>
+        <node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'"/>
+    </nodes>
+</loadBalancer>'
+ 
+ if ($CloudLBRegion -eq "DFW") {
+        
+        $NewCloudLB = Invoke-RestMethod -Uri $DFWNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
+        [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
+
+        Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
+
+        $lbip0 = $NewCloudLBInfo.loadBalancer.virtualIps.virtualIp
+        $nodeip0 = $NewCloudLBInfo.loadBalancer.nodes.node
+        
+        $lbipfinal = ForEach ($ip in $lbip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+        $nodeipfinal = ForEach ($ip in $nodeip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+        $LBDetailOut = @{"CLB Name"=($NewCloudLB.loadbalancer.name);"CLB ID"=($NewCloudLB.loadbalancer.id);"CLB Algorithm"=($NewCloudLB.loadbalancer.algorithm);"CLB Protocol"=($NewCloudLB.loadbalancer.protocol);"CLB Port"=($NewCloudLB.loadbalancer.port);"CLB Status"=($NewCloudLB.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($NewCloudLB.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($NewCloudLB.loadbalancer.created.time);"CLB Updated"=($NewCloudLB.loadbalancer.updated.time);"- CLB Node ID(s)"=($NewCloudLB.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($NewCloudLB.loadbalancer.nodes.node.port);"- CLB Node Condition"=($NewCloudLB.loadbalancer.nodes.node.condition);"- CLB Node Status"=($NewCloudLB.loadbalancer.nodes.node.status)}
+
+        $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+
+        Sleep 10
+
+        Get-CloudLoadBalancers DFW
+                                   }
+
+elseif ($CloudServerRegion -eq "ORD") {
+
+        $NewCloudLB = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
+        [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
+
+        Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
+
+        $lbip0 = $NewCloudLBInfo.loadBalancer.virtualIps.virtualIp
+        $nodeip0 = $NewCloudLBInfo.loadBalancer.nodes.node
+        
+        $lbipfinal = ForEach ($ip in $lbip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+        $nodeipfinal = ForEach ($ip in $nodeip0)
+	    {
+        New-Object psobject -Property @{
+            IP = $ip.address
+	    }}
+
+        $LBDetailOut = @{"CLB Name"=($NewCloudLB.loadbalancer.name);"CLB ID"=($NewCloudLB.loadbalancer.id);"CLB Algorithm"=($NewCloudLB.loadbalancer.algorithm);"CLB Protocol"=($NewCloudLB.loadbalancer.protocol);"CLB Port"=($NewCloudLB.loadbalancer.port);"CLB Status"=($NewCloudLB.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($NewCloudLB.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($NewCloudLB.loadbalancer.created.time);"CLB Updated"=($NewCloudLB.loadbalancer.updated.time);"- CLB Node ID(s)"=($NewCloudLB.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($NewCloudLB.loadbalancer.nodes.node.port);"- CLB Node Condition"=($NewCloudLB.loadbalancer.nodes.node.condition);"- CLB Node Status"=($NewCloudLB.loadbalancer.nodes.node.status)}
+
+        $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+
+        Sleep 10
+
+        Get-CloudServers ORD
+                                   }
+
+else {
+
+    Send-RegionError
     }
 
 }
