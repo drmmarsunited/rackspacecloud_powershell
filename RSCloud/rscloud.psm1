@@ -73,16 +73,6 @@ function Send-RegionError {
 }
 
 
-<# All the "GET-" functions follow the same basic methodology/layout:
-   1) Define input arguments/parameters and their relative positions
-   2) Setting up any needed variables needed to complete the function's purpose
-   3) Use conditional logic to determine which data center's API URI needs to be called
-   4) Retrieve authentication token
-   5) Execute the API call w/ authentication token header
-   6) Parse the output to be properly displayed based on pre-defined tables
-   7) Display error(s) if an incorrect region is entered or servers do not exist within that region
-   #>
-
 ## Global Authentication Cmdlets
 
 function Get-AuthToken {
@@ -157,6 +147,24 @@ else {
     ## Sending a text error if the region has been misspelled
     Send-RegionError
     }
+<#
+ .SYNOPSIS
+ The Get-CloudServerImages cmdlet will pull down a list of all Rackspace Cloud Server image snapshots on your account, including Rackspace's base OS images.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerImages -CloudServerRegion DFW
+ This example shows how to get a list of all available images in your account within the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerImages ORD
+ This example shows how to get a list of all available images in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+#>
 }
 
 function Get-CloudServers{
@@ -222,6 +230,24 @@ else {
 
     Send-RegionError
     }
+<#
+ .SYNOPSIS
+ The Get-CloudServers cmdlet will pull down a list of all Rackspace Cloud Servers on your account.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServers -CloudServerRegion DFW
+ This example shows how to get a list of all servers currently deployed in your account within the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServers ORD
+ This example shows how to get a list of all servers deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+#>
 }
 
 function Get-CloudServerDetails {
@@ -309,6 +335,30 @@ else {
     }
 
 }
+<#
+ .SYNOPSIS
+ The Get-CloudServerDetails cmdlet will pull down a list of detailed information for a specific Rackspace Cloud Server.
+
+ .DESCRIPTION
+ This command is executed against one given cloud server ID, which in turn will return explicit details about that server without any other server data.
+
+ .PARAMETER Bandwidth
+ Use this parameter to indicate that you'd like to see bandwidth statistics of the server ID passed to powershell.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW
+ This example shows how to get explicit data about one cloud server from the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Bandwidth -CloudServerRegion ORD
+ This example shows how to get explicit data about one cloud server from the ORD region, including bandwidth statistics.
+#>
 }
 
 function Get-CloudServerFlavors() {
@@ -347,6 +397,24 @@ else {
     Send-RegionError
 
     }
+<#
+ .SYNOPSIS
+ The Get-CloudServerFlavors cmdlet will pull down a list of Rackspace Cloud flavors. Flavors are the predefined resource templates in Openstack.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerFlavors -CloudServerRegion DFW
+ This example shows how to get flavor data from the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerDetails ORD
+ This example shows how to get flavor data from the ORD region, without specifying the parameter name itself.
+#>
 }
 
 function Add-CloudServer {
@@ -407,7 +475,33 @@ else {
 
     Send-RegionError
     }
+<#
+ .SYNOPSIS
+ The Add-CloudServer cmdlet will create a new Rackspace cloud server in the specified region.
 
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerName
+ Use this parameter to define the name of the server you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+ .PARAMETER CloudServerFlavorID
+ Use this parameter to define the ID of the flavor that you would like applied to your new server.  If you are unsure of which flavor to use, run the "Get-CloudServerFlavors" command.
+
+ .PARAMETER CloudServerImageID
+ Use this parameter to define the ID of the image that you would like to build your new server from.  This can be a Rackspace provided base image, or an existing custom image snapshot that you've previously taken.  If you are unsure of which image to use, run the "Get-CloudServerImages" command.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudServer -CloudServerName NewlyCreatedTestServer -CloudServerFlavorID 3 -CloudServerImageID 26fec9f2-2fb5-4e5e-a19f-0d12540ec639 -CloudServerRegion DFW
+ This example shows how to spin up a new Windows Server 2012 cloud server called "NewlyCreatedTestServer" , with 1GB RAM, 1 vCPU, and 40GB of local storage, in the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudServer NewlyCreatedTestServer1 4 c195ef3b-9195-4474-b6f7-16e5bd86acd0 ORD
+ This example shows how to spin up a new CentOS 6.3 cloud server called "NewlyCreatedTestServer1", with 2GB RAM, 2 vCPU, and 80GB of lcoal storage, in the ORD region. Notice how parameter names were not needed in the command to save time.
+#>
 }
 
 function Add-CloudServerImage {
