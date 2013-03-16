@@ -69,7 +69,7 @@ $EndPointTable = @{Expression={$service.name};Label="Name"},
 function Send-RegionError {
     
     ## This is simply writing an error to the console.
-    Write-Host "You have entered an invalid region identifier.  Please run the Get-Endpoints cmdlet to determine available regions for this environment." -ForegroundColor Red
+    Write-Host "You have entered an invalid region identifier.  Valid region identifiers for this tool are ORD and DFW." -ForegroundColor Red
 }
 
 
@@ -508,8 +508,8 @@ function Add-CloudServerImage {
 
     Param(
         [string]$CloudServerID,
-        [string]$CloudServerRegion,
-        [string]$NewImageName
+        [string]$NewImageName,
+        [string]$CloudServerRegion
         )
     
     ## Setting variables needed to execute this function
@@ -548,7 +548,26 @@ else {
     Send-RegionError
 
     }
+<#
+ .SYNOPSIS
+ The Add-CloudServerImage cmdlet will create a new Rackspace cloud server image snapshot for the provided server id.
 
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER NewImageName
+ Use this parameter to define the name of the image snapshot that is about to be taken.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudServerImage  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -NewImageName SnapshotCopy1 -CloudServerRegion DFW
+ This example shows how to create a new server image snapshot of a serve, UUID of "abc123ef-9876-abcd-1234-123456abcdef", and the snapshot being titled "SnapshotCopy1" in the DFW region.
+#>
 }
 
 function Update-CloudServer {
