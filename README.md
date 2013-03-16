@@ -40,7 +40,9 @@ After editing the file, please save it!  You can then launch Powershell, and run
 
 <h2>Additional Information</h2>
 
-Help for individual commands are built into the module and can be viewed by using normal Powershell cmdlets like "Get-Help Get-CloudServers".  Outside of that, I will be maintaining a small wiki with command overviews, future work, and more help. It can be found here: https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
+Help for individual commands are built into the module and can be viewed by using normal Powershell cmdlets like "Get-Help Get-CloudServers".  Outside of that, I will be maintaining a small wiki with command overviews, future work, and more help. It can be found here: 
+
+https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
 
 
 <b>This is NOT a Rackspace sponsored project. I am a Solutions Engineer with Rackspace and am writing this script as a personal project and eventual contribution into OpenStack.</b>
