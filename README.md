@@ -4,11 +4,11 @@ Introduction
 
 This is a “work in progress” Powershell API client for Rackspace’s public cloud environment.  It is setup to work with Rackspace’s “NextGen” servers, based on Openstack.  The plan is to port this management client to be able to be implemented in ANY Openstack environment, however, no timeframe has been established on this milestone yet.  As with any 3rd party script, please use this module at your own risk.
 
-Prerequisites
+<b>Prerequisites</b>
 
 •	Rackspace Cloud Account
     
-    o    Username
+    o   Username
     
     o	DDI (account number)
     
