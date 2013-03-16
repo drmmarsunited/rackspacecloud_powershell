@@ -38,7 +38,7 @@ For the sake of ease, place the “RSCloud” folder in the 2nd listed folder ab
 
 After editing the file, please save it!  You can then launch Powershell, and run “Get-Modules – ListAvailable” to verify that the module is in the list and the commands it offers.
 
-<2>Additional Information</h2>
+<h2>Additional Information</h2>
 
 Help for the commands are going to be built into the module shortly.  Outside of that, I will be maintaining a small wiki here: https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
 
