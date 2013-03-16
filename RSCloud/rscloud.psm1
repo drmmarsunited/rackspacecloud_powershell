@@ -879,7 +879,30 @@ elseif ($CloudServerRegion -eq "ORD") {
     
     }
 
-    
+<#
+ .SYNOPSIS
+ The Restart-CloudServer cmdlet will carry out a soft reboot of the specified cloud server.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+  .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .PARAMETER Hard
+ Use this switch to indicate that you would like the server be hard rebooted, as opposed to the default of a soft reboot.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW
+ This example shows how to request a soft reboot of cloud server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW -Hard
+ This example shows how to request a hard reboot of cloud server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region.
+#>    
  }
 
 function Optimize-CloudServer {
@@ -980,7 +1003,40 @@ elseif ($CloudServerRegion -eq "ORD") {
     Write-Host "Your Cloud Server will be resized based on your input. Run Get-CloudServers to check on the status of the build and be sure to confirm the resized server after rebuild."
     }
 }
+<#
+ .SYNOPSIS
+ The Optimize-CloudServer cmdlet will resize the specified cloud server to a new flavor.  After the original request, you can also use this command to either REVERT your changes, or CONFIRM them.
 
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .PARAMETER CloudServerFlavorID
+ Use this parameter to define the ID of the flavor that you would like to resize to for the server specified.  If you are unsure of which flavor to use, run the "Get-CloudServerFlavors" command.
+
+ .PARAMETER Confirm
+ Use this switch to indicate that you would like to confirm the requested resize be fully applied after testing your cloud server.  You should only use the confirm switch after the original request to resize the server and have verified everything is working as expected.
+
+ .PARAMETER Revert
+ Use this switch to indicate that you would like to revert the newly resized server to its previous state.  This will permanently undo the original resize operation.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Optimize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW -CloudServerFlavorID 3
+ This example shows how to resize a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region, to a new size of 1GB RAM, 1 vCPU, 40GB storage.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion ORD -Confirm
+ This example shows how to confirm the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion ORD -Revert
+ This example shows how to revert the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region, back to its previous size.
+#>
 }
 
 function Remove-CloudServer { 
@@ -1017,7 +1073,27 @@ elseif ($CloudServerRegion -eq "ORD") {
     Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
 
     }
+<#
+ .SYNOPSIS
+ The Remove-CloudServer cmdlet will permanently delete a cloud server from your account.
 
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW 
+ This example shows how to delete a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the DFW region.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Restart-CloudServer  abc123ef-9876-abcd-1234-123456abcdef ORD
+ This example shows how to delete a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the ORD region, without using the parameter names.
+#>
 }
 
 function Remove-CloudServerImage {
@@ -1059,6 +1135,27 @@ elseif ($CloudServerRegion -eq "ORD") {
 else {
     Send-RegionError
     }
+<#
+ .SYNOPSIS
+ The Remove-CloudServerImage cmdlet will permanently delete a cloud server image snapshot from your account.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerImageID
+ Use this parameter to define the ID of the image that you would like to delete. If you are unsure of the image ID, run the "Get-CloudServerImages" command.
+
+ .PARAMETER CloudServerRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudServerImage  -CloudServerImageID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW 
+ This example shows how to delete a server image snapshot, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the DFW region.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Restart-CloudServerImage  abc123ef-9876-abcd-1234-123456abcdef ORD
+ This example shows how to delete a server image snapshot, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the ORD region, without using the parameter names.
+#>
 }
 
 function Set-CloudServerRescueMode {
@@ -1186,11 +1283,11 @@ if ($CloudLBRegion -eq "DFW") {
     ## Retrieving authentication token
     Get-AuthToken
 
-    ## Making the call to the API for a list of available servers and storing data into a variable
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
     [xml]$LBListStep0 = (Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary)
     [xml]$LBListFinal = ($LBListStep0.innerxml)
 
-    ## Handling empty response bodies indicating that no servers exist in the queried data center
+    ## Handling empty response bodies indicating that no load balancers exist in the queried data center
     if ($LBListFinal.loadBalancers.loadBalancer -eq $null) {
 
         Write-Host "You do not currently have any Cloud Load Balancers provisioned in the DFW region."
@@ -1232,22 +1329,40 @@ else {
 
     Send-RegionError
     }
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancers cmdlet will pull down a list of all Rackspace Cloud Load Balancers on your account.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancers -CloudLBRegion DFW
+ This example shows how to get a list of all load balancers currently deployed in your account within the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancers ORD
+ This example shows how to get a list of all load balancers deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+#>
 }
 
 function Get-CloudLoadBalancerDetails {
 
     Param(
         [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLoadBalancerID,
+        [string]$CloudLBID,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudLoadBalancerRegion
+        [string]$CloudLBRegion
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name DFWLBDetailURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID.xml"
-        Set-Variable -Name ORDLBDetailURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID.xml"
+        Set-Variable -Name DFWLBDetailURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+        Set-Variable -Name ORDLBDetailURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
 
-    if ($CloudLoadBalancerRegion -eq "DFW") {
+    if ($CloudLBRegion -eq "DFW") {
 
     Get-AuthToken
 
@@ -1282,7 +1397,7 @@ function Get-CloudLoadBalancerDetails {
 
     }
 
-    elseif ($CloudLoadBalancerRegion -eq "ORD") {
+    elseif ($CloudLBRegion -eq "ORD") {
 
     Get-AuthToken
 
@@ -1322,14 +1437,90 @@ function Get-CloudLoadBalancerDetails {
     Send-RegionError
 
     }
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancerDetails cmdlet will pull down a list of detailed information for a specific Rackspace Cloud Load Balancer.
 
+ .DESCRIPTION
+See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer of which you want explicit details. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+
+ .PARAMETER CloudLBRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerDetails -CloudLBID 12345 -CloudLBRegion DFW
+ This example shows how to get explicit data about one cloud load balancer from the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerDetails 12345 ORD
+ This example shows how to get explicit data about one cloud load balancer from the ORD region, without using the parameter names.
+#>
+}
+
+function Get-CloudLoadBalancerProtocols{
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name PROTOCOLURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/protocols.xml"
+
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
+    [xml]$LBProtocolListStep0 = (Invoke-RestMethod -Uri $PROTOCOLURI  -Headers $HeaderDictionary)
+    [xml]$LBProtocolListFinal = ($LBProtocolListStep0.innerxml)
+
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $LBProtocolListFinal.Protocols.protocol | Sort-Object Name | ft -AutoSize
+
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancerProtocols cmdlet will pull down a list of all available Rackspace Cloud Load Balancer protocols.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerProtocols
+ This example shows how to get a list of all load balancer protocols available for use.
+#>
+}
+
+function Get-CloudLoadBalancerAlgorithms{
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name ALGORITHMURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/algorithms.xml"
+
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
+    [xml]$LBAlgorithmListStep0 = (Invoke-RestMethod -Uri $ALGORITHMURI  -Headers $HeaderDictionary)
+    [xml]$LBAlgorithmListFinal = ($LBAlgorithmListStep0.innerxml)
+
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $LBAlgorithmListFinal.algorithms.algorithm | Sort-Object Name | ft -AutoSize
+
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancerAlgorithms cmdlet will pull down a list of all available Rackspace Cloud Load Balancer algorithms.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerAlgorithms
+ This example shows how to get a list of all load balancer algorithms available for use.
+#>
 }
 
 function Add-CloudLoadBalancer {
     
     Param(
         [Parameter(Position=0,Mandatory=$true)]
-        [string]$CloudLoadBalancerName,
+        [string]$CloudLBName,
         [Parameter(Position=1,Mandatory=$true)]
         [string]$CloudLBPort,
         [Parameter(Position=2,Mandatory=$true)]
@@ -1353,7 +1544,7 @@ function Add-CloudLoadBalancer {
         Get-AuthToken
 
 [xml]$NewCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-	name="'+$CloudLoadBalancerName+'" 
+	name="'+$CloudLBName+'" 
 	port="'+$CloudLBPort+'"
 	protocol="'+$CloudLBProtocol.ToUpper()+'"
     algorithm="'+$CloudLBAlgorithm.ToUpper()+'">
@@ -1396,7 +1587,7 @@ function Add-CloudLoadBalancer {
         Get-CloudLoadBalancers DFW
                                    }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($CloudLBRegion -eq "ORD") {
 
         $NewCloudLB = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
@@ -1431,5 +1622,135 @@ else {
 
     Send-RegionError
     }
+<#
+ .SYNOPSIS
+ The Add-CloudLoadBalancer cmdlet will create a new Rackspace cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBName
+ Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+ .PARAMETER CloudLBPort
+ Use this parameter to define the TCP/UDP port number of the load balancer you are creating.
+
+.PARAMETER CloudLBProtocol
+ Use this parameter to define the protocol that will bind to this load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-LoadBalancerProtocols" cmdlet.
+
+ .PARAMETER CloudLBAlgorithm
+ Use this parameter to define the load balancing algorithm you'd like to use with your new load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-LoadBalancerAlgorithms" cmdlet.
+
+ .PARAMETER CloudLBNodeIP
+ Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This must be a functional and legitimate IP, or this command will fail run properly.
+
+ .PARAMETER CloudLBNodePort
+ Use this parameter to define the port number of the first node you wish to have served by this load balancer.
+
+ .PARAMETER CloudLBNodeCondition
+ Use this parameter to define the condition of the first node you wish to have served by this load balancer. Accepted values in this field are:
+
+ "ENABLED"  - Node is permitted to accept new connections
+ "DISABLED" - Node is nor permitted to accept any new connections. Existing connections are forcibly terminated.
+
+.PARAMETER CloudLBRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -CloudLBRegion DFW
+ This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+#>
+}
+
+function Get-CloudLoadBalancerNodes{
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$CloudLBRegion
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($CloudLBRegion -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
+    [xml]$NodeListStep0 = (Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary)
+    [xml]$NodeListFinal = ($NodeListStep0.innerxml)
+
+    ## Handling empty response bodies indicating that no load balancers exist in the queried data center
+    if ($NodeListFinal.nodes.node -eq $null) {
+
+        Write-Host "You do not currently have any nodes provisioned to this Cloud Load Balancer."
+
+    }
+    
+    ## See first "if" block for notes on each line##
+    else {
+        
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        $NodeListFinal.nodes.node
+
+    }
 
 }
+
+elseif ($CloudLBRegion -eq "ORD") {  
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
+    [xml]$NodeListStep0 = (Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary)
+    [xml]$NodeListFinal = ($NodeListStep0.innerxml)
+
+    ## Handling empty response bodies indicating that no load balancers exist in the queried data center
+    if ($NodeListFinal.nodes.node -eq $null) {
+
+        Write-Host "You do not currently have any nodes provisioned to this Cloud Load Balancer."
+
+    }
+    
+    ## See first "if" block for notes on each line##
+    else {
+        
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        $NodeListFinal.nodes.node
+
+    }
+ }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancerNodes cmdlet will pull down a list of all nodes that are currently provisioned behind the specified load balancer.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer of which you want explicit details. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ 
+ .PARAMETER CloudLBRegion
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodes -CloudLBID 12345 -CloudLBRegion DFW
+ This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodes 12345 ORD
+ This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
+#>
