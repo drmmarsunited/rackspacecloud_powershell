@@ -8,15 +8,15 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
 
 <b>Rackspace Cloud Account</b>
     
-    o   Username
+* Username
     
-    o	DDI (account number)
+* DDI (account number)
     
-    o	API Key
+* API Key
 
 <b>Windows Management Framework 3.0</b>
     
-    o	[Download WMF 3.0 Here] (http://www.microsoft.com/en-us/download/details.aspx?id=34595)
+* [Download WMF 3.0 Here] (http://www.microsoft.com/en-us/download/details.aspx?id=34595)
 
 <h2>How to Install</h2>
 
