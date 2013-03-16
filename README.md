@@ -6,7 +6,7 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
 
 <h2>Prerequisites</h2>
 
-•	<b>Rackspace Cloud Account</b>
+<b>Rackspace Cloud Account</b>
     
     o   Username
     
@@ -14,9 +14,9 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
     
     o	API Key
 
-•	<b>Windows Management Framework 3.0</b>
+<b>Windows Management Framework 3.0</b>
     
-    o	http://www.microsoft.com/en-us/download/details.aspx?id=34595 
+    o	<a href="http://www.microsoft.com/en-us/download/details.aspx?id=34595">Download WMF 3.0 Here</a>
 
 <h2>How to Install</h2>
 
@@ -38,7 +38,7 @@ For the sake of ease, place the “RSCloud” folder in the 2nd listed folder ab
 
 After editing the file, please save it!  You can then launch Powershell, and run “Get-Modules – ListAvailable” to verify that the module is in the list and the commands it offers.
 
-<b>Additional Information</b>
+<2>Additional Information</h2>
 
 Help for the commands are going to be built into the module shortly.  Outside of that, I will be maintaining a small wiki here: https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
 
