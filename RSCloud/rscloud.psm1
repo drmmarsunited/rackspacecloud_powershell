@@ -1,7 +1,7 @@
 ## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
 ## Description: PSv3 module for NextGen Rackspace Cloud API interaction ##
-## Version 1.2 ##
+## Version 1.5 ##
 ## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -21,6 +21,10 @@ $ServerListTable = @{Expression={$_.id};Label="Server ID";width=38},
 @{Expression={$_.Name};Label="Server Name";width=40}, 
 @{Expression={$_.Status};Label="Server Status";width=15}, 
 @{Expression={$_.addresses.network.ip.addr};Label="Server IP Addresses";width=200}
+
+$NetworkListTable = @{Expression={$_.label};Label="Network Name";width=25}, 
+@{Expression={$_.cidr};Label="Assigned Block";width=30}, 
+@{Expression={$_.id};Label="Network ID";width=33}
 
 $LBListTable = @{Expression={$_.id};Label="CLB ID";width=15}, 
 @{Expression={$_.Name};Label="CLB Name";width=40}, 
@@ -110,7 +114,7 @@ function Get-CloudServerImages {
     
     Param(
         [Parameter (Position=1, Mandatory=$true)]
-        [string] $CloudServerRegion
+        [string] $Region
     )
 
     ## Setting variables needed to execute this function
@@ -118,7 +122,7 @@ function Get-CloudServerImages {
     Set-Variable -Name ORDImageURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail.xml"
 
 ## Using conditional logic to route requests to the relevant API per data center
-if ($CloudServerRegion -eq "DFW"){
+if ($Region -eq "DFW"){
     
     ## Authentication token check/retrieval
     Get-AuthToken
@@ -132,7 +136,7 @@ if ($CloudServerRegion -eq "DFW"){
     }
 
 ## See first "if" block for notes on each line##
-elseif ($CloudServerRegion -eq "ORD"){
+elseif ($Region -eq "ORD"){
 
     Get-AuthToken
 
@@ -158,7 +162,7 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudServerImages -CloudServerRegion DFW
+ PS C:\Users\Administrator> Get-CloudServerImages -Region DFW
  This example shows how to get a list of all available images in your account within the DFW region.
 
   .EXAMPLE
@@ -171,7 +175,7 @@ function Get-CloudServers{
 
     Param(
         [Parameter (Position=0, Mandatory=$false)]
-        [string] $CloudServerRegion
+        [string] $Region
     )
 
     ## Setting variables needed to execute this function
@@ -179,7 +183,7 @@ function Get-CloudServers{
     Set-Variable -Name ORDServerURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail.xml"
 
 ## Using conditional logic to route requests to the relevant API per data center
-if ($CloudServerRegion -eq "DFW") {    
+if ($Region -eq "DFW") {    
     
     ## Retrieving authentication token
     Get-AuthToken
@@ -205,7 +209,7 @@ if ($CloudServerRegion -eq "DFW") {
 
 }
 
-elseif ($CloudServerRegion -eq "ORD") {  
+elseif ($Region -eq "ORD") {  
     
     Get-AuthToken
 
@@ -241,7 +245,7 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudServers -CloudServerRegion DFW
+ PS C:\Users\Administrator> Get-CloudServers -Region DFW
  This example shows how to get a list of all servers currently deployed in your account within the DFW region.
 
   .EXAMPLE
@@ -258,7 +262,7 @@ function Get-CloudServerDetails {
         [Parameter(Position=1,Mandatory=$true)]
         [string]$CloudServerID,
         [Parameter(Position=2,Mandatory=$true)]
-        [string]$CloudServerRegion
+        [string]$Region
         )
 
         ## Setting variables needed to execute this function
@@ -267,7 +271,7 @@ function Get-CloudServerDetails {
 
 if ($Bandwidth) {
 
-    if ($CloudServerRegion -eq "DFW") {
+    if ($Region -eq "DFW") {
 
     Get-AuthToken
 
@@ -278,7 +282,7 @@ if ($Bandwidth) {
 
     }
 
-    elseif ($CloudServerRegion -eq "ORD") {
+    elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -299,7 +303,7 @@ if ($Bandwidth) {
 
 else {
 
-    if ($CloudServerRegion -eq "DFW") {
+    if ($Region -eq "DFW") {
 
     Get-AuthToken
 
@@ -312,7 +316,7 @@ else {
 
     }
 
-    elseif ($CloudServerRegion -eq "ORD") {
+    elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -352,11 +356,11 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW
+ PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW
  This example shows how to get explicit data about one cloud server from the DFW region.
 
   .EXAMPLE
- PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Bandwidth -CloudServerRegion ORD
+ PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Bandwidth -Region ORD
  This example shows how to get explicit data about one cloud server from the ORD region, including bandwidth statistics.
 #>
 }
@@ -364,14 +368,14 @@ else {
 function Get-CloudServerFlavors() {
     param(
         [Parameter (Position=1, Mandatory=$true)]
-        [string] $CloudServerRegion
+        [string] $Region
     )
 
     ## Setting variables needed to execute this function
     Set-Variable -Name DFWFlavorURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/flavors/detail.xml"
     Set-Variable -Name ORDFlavorURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/flavors/detail.xml"
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
 
     Get-AuthToken
 
@@ -381,7 +385,7 @@ if ($CloudServerRegion -eq "DFW") {
     $ServerFlavorListFinal.Flavors.Flavor | Sort-Object id | ft $FlavorListTable -AutoSize
     }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -408,7 +412,7 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudServerFlavors -CloudServerRegion DFW
+ PS C:\Users\Administrator> Get-CloudServerFlavors -Region DFW
  This example shows how to get flavor data from the DFW region.
 
   .EXAMPLE
@@ -427,7 +431,7 @@ function Add-CloudServer {
         [Parameter(Position=2,Mandatory=$true)]
         [string]$CloudServerImageID,
         [Parameter(Position=3,Mandatory=$true)]
-        [string]$CloudServerRegion
+        [string]$Region
         )
 
         ## Setting variables needed to execute this function
@@ -443,7 +447,7 @@ function Add-CloudServer {
                 name="'+$CloudServerName+'">
            </server>'
  
- if ($CloudServerRegion -eq "DFW") {
+ if ($Region -eq "DFW") {
         
         $NewCloudServer = Invoke-RestMethod -Uri $DFWNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post
         $NewCloudServerInfo = $NewCloudServer.innerxml
@@ -457,7 +461,7 @@ function Add-CloudServer {
         Get-CloudServers DFW
                                    }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
         $NewCloudServer = Invoke-RestMethod -Uri $ORDNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post
         $NewCloudServerInfo = $NewCloudServer.innerxml
@@ -495,7 +499,7 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-CloudServer -CloudServerName NewlyCreatedTestServer -CloudServerFlavorID 3 -CloudServerImageID 26fec9f2-2fb5-4e5e-a19f-0d12540ec639 -CloudServerRegion DFW
+ PS C:\Users\Administrator> Add-CloudServer -CloudServerName NewlyCreatedTestServer -CloudServerFlavorID 3 -CloudServerImageID 26fec9f2-2fb5-4e5e-a19f-0d12540ec639 -Region DFW
  This example shows how to spin up a new Windows Server 2012 cloud server called "NewlyCreatedTestServer" , with 1GB RAM, 1 vCPU, and 40GB of local storage, in the DFW region.
 
   .EXAMPLE
@@ -509,7 +513,7 @@ function Add-CloudServerImage {
     Param(
         [string]$CloudServerID,
         [string]$NewImageName,
-        [string]$CloudServerRegion
+        [string]$Region
         )
     
     ## Setting variables needed to execute this function
@@ -519,7 +523,7 @@ function Add-CloudServerImage {
     name="'+$NewImageName+'">
 </createImage>'
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
 
     Get-AuthToken
     
@@ -531,7 +535,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     Get-AuthToken
     
@@ -565,7 +569,7 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-CloudServerImage  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -NewImageName SnapshotCopy1 -CloudServerRegion DFW
+ PS C:\Users\Administrator> Add-CloudServerImage  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -NewImageName SnapshotCopy1 -Region DFW
  This example shows how to create a new server image snapshot of a serve, UUID of "abc123ef-9876-abcd-1234-123456abcdef", and the snapshot being titled "SnapshotCopy1" in the DFW region.
 #>
 }
@@ -584,12 +588,12 @@ function Update-CloudServer {
         [Parameter(Mandatory=$true)]
         [string]$CloudServerID,
         [Parameter(Mandatory=$true)]
-        [string]$CloudServerRegion,
+        [string]$Region,
         [Parameter(Mandatory=$true)]
         [string]$NewNameOrAddressOrPasswordValue
         )
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
 
     if ($UpdateName) {
 
@@ -609,7 +613,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     Sleep 10
 
-    Get-CloudServers $CloudServerRegion
+    Get-CloudServers $Region
                 
                 }
 
@@ -632,7 +636,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     Sleep 10
 
-    Get-CloudServers $CloudServerRegion
+    Get-CloudServers $Region
                     
                     }
 
@@ -655,7 +659,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     Sleep 10
 
-    Get-CloudServers $CloudServerRegion
+    Get-CloudServers $Region
                     
                     }
 
@@ -677,7 +681,7 @@ if ($CloudServerRegion -eq "DFW") {
                         }
     }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     if ($UpdateName) {
 
@@ -697,7 +701,7 @@ elseif ($CloudServerRegion -eq "ORD") {
 
     Sleep 10
 
-    Get-CloudServers $CloudServerRegion
+    Get-CloudServers $Region
                 
                 }
 
@@ -720,7 +724,7 @@ elseif ($CloudServerRegion -eq "ORD") {
 
     Sleep 10
 
-    Get-CloudServers $CloudServerRegion
+    Get-CloudServers $Region
                     
                     }
 
@@ -742,7 +746,7 @@ elseif ($CloudServerRegion -eq "ORD") {
 
     Sleep 10
 
-    Get-CloudServers $CloudServerRegion
+    Get-CloudServers $Region
                     
                     }
 
@@ -815,7 +819,7 @@ function Restart-CloudServer {
         [Parameter(Position=0,Mandatory=$True)]
         [string]$CloudServerID,
         [Parameter(Position=1,Mandatory=$True)]
-        [string]$CloudServerRegion,
+        [string]$Region,
         [Parameter(Position=2,Mandatory=$False)]
         [switch]$Hard
         )
@@ -826,7 +830,7 @@ $RestartServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
     xmlns="http://docs.openstack.org/compute/api/v1.1"
     type="SOFT"/>'
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
 
     Get-AuthToken
 
@@ -853,7 +857,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -896,11 +900,11 @@ elseif ($CloudServerRegion -eq "ORD") {
  Use this switch to indicate that you would like the server be hard rebooted, as opposed to the default of a soft reboot.
 
  .EXAMPLE
- PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW
  This example shows how to request a soft reboot of cloud server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW -Hard
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW -Hard
  This example shows how to request a hard reboot of cloud server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region.
 #>    
  }
@@ -915,12 +919,12 @@ function Optimize-CloudServer {
         [Parameter(Mandatory=$True)]
         [string]$CloudServerID,
         [Parameter(Mandatory=$True)]
-        [string]$CloudServerRegion,
+        [string]$Region,
         [Parameter(Mandatory=$False)]
         [int]$CloudServerFlavorID
         )
 
-if ($CloudServerRegion -eq "DFW") {    
+if ($Region -eq "DFW") {    
     
     if ($Confirm) {
       
@@ -970,7 +974,7 @@ if ($CloudServerRegion -eq "DFW") {
     }
 }
 
-elseif ($CloudServerRegion -eq "ORD") {    
+elseif ($Region -eq "ORD") {    
     
     if ($Confirm) {
       
@@ -1026,15 +1030,15 @@ elseif ($CloudServerRegion -eq "ORD") {
  Use this switch to indicate that you would like to revert the newly resized server to its previous state.  This will permanently undo the original resize operation.
 
  .EXAMPLE
- PS C:\Users\Administrator> Optimize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW -CloudServerFlavorID 3
+ PS C:\Users\Administrator> Optimize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW -CloudServerFlavorID 3
  This example shows how to resize a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region, to a new size of 1GB RAM, 1 vCPU, 40GB storage.
 
  .EXAMPLE
- PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion ORD -Confirm
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Confirm
  This example shows how to confirm the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion ORD -Revert
+ PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Revert
  This example shows how to revert the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region, back to its previous size.
 #>
 }
@@ -1045,10 +1049,10 @@ function Remove-CloudServer {
         [Parameter(Position=0,Mandatory=$True)]
         [string]$CloudServerID,
         [Parameter(Position=1,Mandatory=$True)]
-        [string]$CloudServerRegion
+        [string]$Region
         )
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
 
     Get-AuthToken
     
@@ -1061,7 +1065,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     Get-AuthToken
     
@@ -1087,7 +1091,7 @@ elseif ($CloudServerRegion -eq "ORD") {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Remove-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW 
+ PS C:\Users\Administrator> Remove-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW 
  This example shows how to delete a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the DFW region.
 
  .EXAMPLE
@@ -1102,11 +1106,11 @@ function Remove-CloudServerImage {
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudServerImageID,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudServerRegion
+        [string]$Region
         )
 
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
     
     Get-AuthToken
     
@@ -1119,7 +1123,7 @@ if ($CloudServerRegion -eq "DFW") {
 
     }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
     
     Get-AuthToken
 
@@ -1149,7 +1153,7 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Remove-CloudServerImage  -CloudServerImageID abc123ef-9876-abcd-1234-123456abcdef -CloudServerRegion DFW 
+ PS C:\Users\Administrator> Remove-CloudServerImage  -CloudServerImageID abc123ef-9876-abcd-1234-123456abcdef -Region DFW 
  This example shows how to delete a server image snapshot, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the DFW region.
 
  .EXAMPLE
@@ -1164,7 +1168,7 @@ function Set-CloudServerRescueMode {
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudServerID,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudServerRegion
+        [string]$Region
         )
     
     ## Setting variables needed to execute this function
@@ -1172,7 +1176,7 @@ function Set-CloudServerRescueMode {
     <rescue xmlns="http://docs.openstack.org/compute/ext/rescue/api/v1.1" />'
 
 
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
 
     Get-AuthToken
 
@@ -1190,7 +1194,7 @@ if ($CloudServerRegion -eq "DFW") {
 
 }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -1220,7 +1224,7 @@ function Remove-CloudServerRescueMode {
 
     Param(
         [string]$CloudServerID,
-        [string]$CloudServerRegion
+        [string]$Region
         )
     
     ## Setting variables needed to execute this function
@@ -1228,7 +1232,7 @@ function Remove-CloudServerRescueMode {
 <unrescue xmlns="http://docs.rackspacecloud.com/servers/api/v1.1" />'
 
 ## Using conditional logic to route requests to the relevant API per data center
-if ($CloudServerRegion -eq "DFW") {
+if ($Region -eq "DFW") {
     
     ## Retrieving authentication token
     Get-AuthToken
@@ -1242,7 +1246,7 @@ if ($CloudServerRegion -eq "DFW") {
 
 }
 
-elseif ($CloudServerRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -1264,13 +1268,80 @@ else {
 }
 
 
+## Cloud Network API Cmdlets
+
+function Get-CloudNetworks{
+
+    Param(
+        [Parameter (Position=0, Mandatory=$false)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWNetworksURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+    Set-Variable -Name ORDNetworksURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available networks and storing data into a variable
+    [xml]$NetworkListStep0 = (Invoke-RestMethod -Uri $DFWNetworksURI  -Headers $HeaderDictionary)
+    [xml]$NetworkListFinal = ($NetworkListStep0.innerxml)
+
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $NetworkListFinal.networks.network | Sort-Object label | ft $NetworkListTable -AutoSize
+
+}
+
+elseif ($Region -eq "ORD") {  
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available networks and storing data into a variable
+    [xml]$NetworkListStep0 = (Invoke-RestMethod -Uri $ORDNetworksURI  -Headers $HeaderDictionary)
+    [xml]$NetworkListFinal = ($NetworkListStep0.innerxml)
+
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $NetworkListFinal.networks.network | Sort-Object label | ft $NetworkListTable -AutoSize
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudNetworks cmdlet will pull down a list of all Rackspace Cloud Networks on your account.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudNetworks -Region DFW
+ This example shows how to get a list of all networks currently deployed in your account within the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudNetworks ORD
+ This example shows how to get a list of all networks deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+#>
+}
+
+
 ## Cloud Load Balancer API Cmdlets
 
 function Get-CloudLoadBalancers{
 
     Param(
         [Parameter (Position=0, Mandatory=$false)]
-        [string] $CloudLBRegion
+        [string] $Region
     )
 
     ## Setting variables needed to execute this function
@@ -1278,7 +1349,7 @@ function Get-CloudLoadBalancers{
     Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
 
 ## Using conditional logic to route requests to the relevant API per data center
-if ($CloudLBRegion -eq "DFW") {    
+if ($Region -eq "DFW") {    
     
     ## Retrieving authentication token
     Get-AuthToken
@@ -1304,7 +1375,7 @@ if ($CloudLBRegion -eq "DFW") {
 
 }
 
-elseif ($CloudLBRegion -eq "ORD") {  
+elseif ($Region -eq "ORD") {  
     
     Get-AuthToken
 
@@ -1336,11 +1407,11 @@ else {
  .DESCRIPTION
  See the synopsis field.
 
- .PARAMETER CloudLBRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancers -CloudLBRegion DFW
+ PS C:\Users\Administrator> Get-CloudLoadBalancers -Region DFW
  This example shows how to get a list of all load balancers currently deployed in your account within the DFW region.
 
   .EXAMPLE
@@ -1355,14 +1426,14 @@ function Get-CloudLoadBalancerDetails {
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudLBID,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudLBRegion
+        [string]$Region
         )
 
         ## Setting variables needed to execute this function
         Set-Variable -Name DFWLBDetailURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
         Set-Variable -Name ORDLBDetailURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
 
-    if ($CloudLBRegion -eq "DFW") {
+    if ($Region -eq "DFW") {
 
     Get-AuthToken
 
@@ -1397,7 +1468,7 @@ function Get-CloudLoadBalancerDetails {
 
     }
 
-    elseif ($CloudLBRegion -eq "ORD") {
+    elseif ($Region -eq "ORD") {
 
     Get-AuthToken
 
@@ -1447,11 +1518,11 @@ See synopsis.
  .PARAMETER CloudLBID
  Use this parameter to indicate the ID of the cloud load balancer of which you want explicit details. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
- .PARAMETER CloudLBRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancerDetails -CloudLBID 12345 -CloudLBRegion DFW
+ PS C:\Users\Administrator> Get-CloudLoadBalancerDetails -CloudLBID 12345 -Region DFW
  This example shows how to get explicit data about one cloud load balancer from the DFW region.
 
   .EXAMPLE
@@ -1534,7 +1605,7 @@ function Add-CloudLoadBalancer {
         [Parameter(Position=6,Mandatory=$true)]
         [string]$CloudLBNodeCondition,
         [Parameter(Position=7,Mandatory=$true)]
-        [string]$CloudLBRegion
+        [string]$Region
         )
 
         ## Setting variables needed to execute this function
@@ -1556,7 +1627,7 @@ function Add-CloudLoadBalancer {
 	</nodes>
 </loadBalancer>'
  
- if ($CloudLBRegion -eq "DFW") {
+ if ($Region -eq "DFW") {
         
         $NewCloudLB = Invoke-RestMethod -Uri $DFWNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
@@ -1587,7 +1658,7 @@ function Add-CloudLoadBalancer {
         Get-CloudLoadBalancers DFW
                                    }
 
-elseif ($CloudLBRegion -eq "ORD") {
+elseif ($Region -eq "ORD") {
 
         $NewCloudLB = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
@@ -1653,11 +1724,11 @@ else {
  "ENABLED"  - Node is permitted to accept new connections
  "DISABLED" - Node is nor permitted to accept any new connections. Existing connections are forcibly terminated.
 
-.PARAMETER CloudLBRegion
+.PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -CloudLBRegion DFW
+ PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
 #>
 }
@@ -1668,7 +1739,7 @@ function Get-CloudLoadBalancerNodes{
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudLBID,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudLBRegion
+        [string]$Region
         )
 
     ## Setting variables needed to execute this function
@@ -1676,7 +1747,7 @@ function Get-CloudLoadBalancerNodes{
     Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
 
 ## Using conditional logic to route requests to the relevant API per data center
-if ($CloudLBRegion -eq "DFW") {    
+if ($Region -eq "DFW") {    
     
     ## Retrieving authentication token
     Get-AuthToken
@@ -1703,7 +1774,7 @@ if ($CloudLBRegion -eq "DFW") {
 
 }
 
-elseif ($CloudLBRegion -eq "ORD") {  
+elseif ($Region -eq "ORD") {  
     
     ## Retrieving authentication token
     Get-AuthToken
@@ -1743,14 +1814,15 @@ else {
  .PARAMETER CloudLBID
  Use this parameter to indicate the ID of the cloud load balancer of which you want explicit details. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
  
- .PARAMETER CloudLBRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancerNodes -CloudLBID 12345 -CloudLBRegion DFW
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodes -CloudLBID 12345 -Region DFW
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the DFW region.
 
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancerNodes 12345 ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
 #>
+}
