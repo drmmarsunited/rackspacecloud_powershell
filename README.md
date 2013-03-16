@@ -40,7 +40,7 @@ After editing the file, please save it!  You can then launch Powershell, and run
 
 <h2>Additional Information</h2>
 
-Help for individual commands are built into the module and can be viewed by using normal Powershell cmdlets like "Get-Help Get-CloudServers".  Outside of that, I will be maintaining a small wiki with command overviews, future work, and more help. It can be found here: 
+Help for individual commands are built into the module and can be viewed by using normal Powershell cmdlets, for example "Get-Help Get-CloudServers".  To get more information, I will be maintaining a small wiki with supported command overviews, future work plans, and more help. It can be found here: 
 
 https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
 
