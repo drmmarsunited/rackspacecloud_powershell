@@ -1958,3 +1958,118 @@ else {
  PS C:\Users\Administrator> Get-CloudLoadBalancerNodes 12345 ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
 #>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function Add-CloudLoadBalancerNode {
+    
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$CloudLBNodeIP,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$CloudLBNodePort,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$CloudLBNodeCondition,
+        [Parameter(Position=4,Mandatory=$true)]
+        [string]$CloudLBNodeType,
+        [Parameter(Position=5,Mandatory=$false)]
+        [string]$CloudLBNodeWeight,
+        [Parameter(Position=6,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWNewNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID/nodes.xml"
+        Set-Variable -Name ORDNewNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID/nodes.xml"
+
+        Get-AuthToken
+	
+		if ($CloudLBNodeWeight -eq null) {
+		
+		[xml]$NewCloudLBNodeXMLBody = '<nodes xmlns="http://docs.openstack.org/loadbalancers/api/v1.0">
+		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'" type="'+$CloudLBNodeType+'"/>
+		</nodes>'}
+	 
+	 	else ($CloudLBNodeWeight -ne null) {
+	 	
+	 	[xml]$NewCloudLBNodeXMLBody = '<nodes xmlns="http://docs.openstack.org/loadbalancers/api/v1.0">
+		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'" type="'+$CloudLBNodeType+'" weight="'+$CloudLBNodeWeight+'"/>
+		</nodes>'}
+ 
+ if ($Region -eq "DFW") {
+        
+        $NewCloudLBNode = Invoke-RestMethod -Uri $DFWNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
+        [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
+	
+	$NewCloudLBNodeInfo.nodes.node
+	}
+
+elseif ($Region -eq "ORD") {
+
+        $NewCloudLBNode = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
+        [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
+	
+	$NewCloudLBNodeInfo.nodes.node
+	}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-CloudLoadBalancerNode cmdlet will add a new node to a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+ .PARAMETER CloudLBNodeIP
+ Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This must be a functional and legitimate IP, or this command will fail run properly.
+
+ .PARAMETER CloudLBNodePort
+ Use this parameter to define the port number of the first node you wish to have served by this load balancer.
+
+ .PARAMETER CloudLBNodeCondition
+ Use this parameter to define the condition of the first node you wish to have served by this load balancer. Accepted values in this field are:
+
+ "ENABLED"  - Node is permitted to accept new connections
+ "DISABLED" - Node is not permitted to accept any new connections. Existing connections are forcibly terminated.
+
+ .Parameter CloudLBNodeType
+ Use this parameter to define the type of node you are adding to the load balancer.  Allowable node types are:
+ 
+ "PRIMARY"   – Nodes defined as PRIMARY are in the normal rotation to receive traffic from the load balancer.
+ "SECONDARY" – Nodes defined as SECONDARY are only in the rotation to receive traffic from the load balancer when all the primary nodes fail.
+ 
+ .Parameter CloudLBNodeWeight
+ Use this parameter to definte the weight of the node you are adding to the load balancer.  This parameter is only required if you are adding a node to a load balancer that is utilizing a weighted load balancing algorithm.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
+ This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+#>
+}
