@@ -1334,6 +1334,139 @@ else {
 #>
 }
 
+function Add-CloudNetwork {
+    
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudNetworkLabel,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$CloudNetworkCIDR,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWNewNetURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+        Set-Variable -Name ORDNewNetURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+
+        Get-AuthToken
+
+[xml]$NewCloudNetXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+<network
+  cidr="'+$CloudNetworkCIDR+'"
+  label="'+$CloudNetworkLabel+'"
+/>'
+ 
+ if ($Region -eq "DFW") {
+        
+        $NewCloudNet = Invoke-RestMethod -Uri $DFWNewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post
+        [xml]$NewCloudNetInfo = $NewCloudNet.innerxml
+
+        Write-Host "You have just created the following cloud network:"
+
+        $NewCloudNetInfo.network
+
+        }
+
+elseif ($Region -eq "ORD") {
+
+        $NewCloudNet = Invoke-RestMethod -Uri $ORDNewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post
+        [xml]$NewCloudNetInfo = $NewCloudNet.innerxml
+
+        Write-Host "You have just created the following cloud network:"
+
+        $NewCloudNetInfo.network
+
+        }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-CloudNetwork cmdlet will create a new Rackspace cloud network in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudNetworkLabel
+ Use this parameter to define the name/label of the cloud network you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+ .PARAMETER CloudNetworkCIDR
+ Use this parameter to define the IP block that is going to be used for this cloud network.  This must be written in CIDR notation, for example, "172.16.0.0/24" without the quotes.
+
+.PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudNetwork -CloudNetworkLabel DBServers -CloudNetworkCIDR 192.168.101.0/24 -Region DFW
+ This example shows how to spin up a new cloud network called DBServers, which will service IP block 192.168.101.0/24, in the DFW region.
+
+.EXAMPLE
+ PS C:\Users\Administrator> Add-CloudNetwork PaymentServers 192.168.101.0/24 ORD
+ This example shows how to spin up a new cloud network called PaymentServers, which will service IP block 192.168.101.0/24 in the ORD region, without using the parameter names.
+#>
+}
+
+function Remove-CloudNetwork {
+    
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudNetworkID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWDelNetURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2/$CloudNetworkID.xml"
+        Set-Variable -Name ORDDelNetURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2/$CloudNetworkID.xml"
+
+        Get-AuthToken
+
+ if ($Region -eq "DFW") {
+        
+        $DelCloudNet = Invoke-RestMethod -Uri $DFWDelNetURI -Headers $HeaderDictionary -Method DELETE
+
+        Write-Host "The cloud network has been deleted."
+
+        }
+
+elseif ($Region -eq "ORD") {
+
+        $DelCloudNet = Invoke-RestMethod -Uri $ORDDelNetURI -Headers $HeaderDictionary -Method DELETE
+
+        Write-Host "The cloud network has been deleted."
+
+        }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-CloudNetwork cmdlet will delete Rackspace cloud network in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudNetworkID
+ Use this parameter to define the name/label of the cloud network you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+.PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudNetwork -CloudNetworkID 88e316b1-8e69-4591-ba92-bea8bb1837f5 -Region ord
+ This example shows how to delete a cloud network with an ID of 88e316b1-8e69-4591-ba92-bea8bb1837f5 from the ORD region.
+
+.EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudNetwork 88e316b1-8e69-4591-ba92-bea8bb1837f5 DFW
+ This example shows how to delete a cloud network with an ID of 88e316b1-8e69-4591-ba92-bea8bb1837f5 from the DFW region, without the parameter names.
+#>
+}
+
 
 ## Cloud Load Balancer API Cmdlets
 
@@ -1825,4 +1958,3 @@ else {
  PS C:\Users\Administrator> Get-CloudLoadBalancerNodes 12345 ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
 #>
-}
