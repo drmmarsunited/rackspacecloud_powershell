@@ -2098,7 +2098,7 @@ else {
     }
 <#
  .SYNOPSIS
- The Remove-CloudLoadBalancerNode cmdlet will remove a new node from a cloud load balancer in the specified region.
+ The Remove-CloudLoadBalancerNode cmdlet will remove a node from a cloud load balancer in the specified region.
 
  .DESCRIPTION
  See synopsis.
@@ -2115,5 +2115,57 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudLoadBalancerNode -CloudLBID 123456 -CloudLBNodeID 5 -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+#>
+}
+
+function Remove-CloudLoadBalancer {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+        Set-Variable -Name ORDNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+
+        Get-AuthToken
+
+     if ($Region -eq "DFW") {
+        
+        $DelCloudLBNode = Invoke-RestMethod -Uri $DFWNodeURI -Headers $HeaderDictionary -Method Delete
+	
+    Write-Host "The load balancer has been deleted."
+	}
+
+elseif ($Region -eq "ORD") {
+
+        $DelCloudLBNode = Invoke-RestMethod -Uri $ORDNodeURI -Headers $HeaderDictionary -Method Delete
+	
+    Write-Host "The load balancer has been deleted."
+	}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-CloudLoadBalancer cmdlet will remove a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the name of the load balancer you are about to remove.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudLoadBalancer -CloudLBID 123456 -Region DFW
+ This example shows how to remove a load balancer with an ID of 12345 in the DFW region.
 #>
 }
