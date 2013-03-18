@@ -17,6 +17,10 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
 <b>Windows Management Framework 3.0</b>
     
 * [Download WMF 3.0 Here] (http://www.microsoft.com/en-us/download/details.aspx?id=34595)
+ 
+<b>Powershell Execution Policy</b>
+
+* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" and then "Import-Module RSCloud".
 
 <h2>How to Install</h2>
 
