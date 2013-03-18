@@ -2060,3 +2060,60 @@ else {
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
 #>
 }
+
+function Remove-CloudLoadBalancerNode {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$CloudLBNodeID,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
+        Set-Variable -Name ORDNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
+
+        Get-AuthToken
+
+     if ($Region -eq "DFW") {
+        
+        $DelCloudLBNode = Invoke-RestMethod -Uri $DFWNodeURI -Headers $HeaderDictionary -Method Delete
+	
+    Write-Host "The node has been deleted."
+	}
+
+elseif ($Region -eq "ORD") {
+
+        $DelCloudLBNode = Invoke-RestMethod -Uri $ORDNodeURI -Headers $HeaderDictionary -Method Delete
+	
+    Write-Host "The node has been deleted."
+	}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-CloudLoadBalancerNode cmdlet will remove a new node from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+ .PARAMETER CloudLBNodeID
+ Use this parameter to define the ID of the node you wish to remove from the load balancer configuration.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudLoadBalancerNode -CloudLBID 123456 -CloudLBNodeID 5 -Region DFW
+ This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+#>
+}
