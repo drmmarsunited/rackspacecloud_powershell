@@ -1977,7 +1977,7 @@ else {
 
 
 
-function Add-CloudLoadBalancerNode {
+<#function Add-CloudLoadBalancerNode {
     
     Param(
         [Parameter(Position=0,Mandatory=$true)]
@@ -2072,4 +2072,3 @@ else {
  PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
 #>
-}
