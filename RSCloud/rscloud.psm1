@@ -1958,26 +1958,9 @@ else {
  PS C:\Users\Administrator> Get-CloudLoadBalancerNodes 12345 ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
 #>
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<#function Add-CloudLoadBalancerNode {
+function Add-CloudLoadBalancerNode {
     
     Param(
         [Parameter(Position=0,Mandatory=$true)]
@@ -1997,18 +1980,18 @@ else {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name DFWNewNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID/nodes.xml"
-        Set-Variable -Name ORDNewNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLoadBalancerID/nodes.xml"
+        Set-Variable -Name DFWNewNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
+        Set-Variable -Name ORDNewNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
 
         Get-AuthToken
 	
-		if ($CloudLBNodeWeight -eq null) {
+		if (!$CloudLBNodeWeight) {
 		
 		[xml]$NewCloudLBNodeXMLBody = '<nodes xmlns="http://docs.openstack.org/loadbalancers/api/v1.0">
-		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'" type="'+$CloudLBNodeType+'"/>
+		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition.ToUpper()+'" type="'+$CloudLBNodeType.ToUpper()+'"/>
 		</nodes>'}
 	 
-	 	else ($CloudLBNodeWeight -ne null) {
+	 	elseif ($CloudLBNodeWeight) {
 	 	
 	 	[xml]$NewCloudLBNodeXMLBody = '<nodes xmlns="http://docs.openstack.org/loadbalancers/api/v1.0">
 		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'" type="'+$CloudLBNodeType+'" weight="'+$CloudLBNodeWeight+'"/>
@@ -2019,15 +2002,19 @@ else {
         $NewCloudLBNode = Invoke-RestMethod -Uri $DFWNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
         [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
 	
+    Write-Host "The node has been added as follows:"
+
 	$NewCloudLBNodeInfo.nodes.node
 	}
 
 elseif ($Region -eq "ORD") {
 
-        $NewCloudLBNode = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
+        $NewCloudLBNode = Invoke-RestMethod -Uri $ORDNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
         [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
 	
-	$NewCloudLBNodeInfo.nodes.node
+	    Write-Host "The node has been added as follows:"
+
+        $NewCloudLBNodeInfo.nodes.node
 	}
 
 else {
@@ -2045,7 +2032,7 @@ else {
  Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
 
  .PARAMETER CloudLBNodeIP
- Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This must be a functional and legitimate IP, or this command will fail run properly.
+ Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This MUST be a functional and legitimate IP, or this command will fail run properly.
 
  .PARAMETER CloudLBNodePort
  Use this parameter to define the port number of the first node you wish to have served by this load balancer.
@@ -2072,3 +2059,4 @@ else {
  PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
 #>
+}
