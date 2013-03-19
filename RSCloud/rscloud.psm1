@@ -1,7 +1,7 @@
 ## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
 ## Description: PSv3 module for NextGen Rackspace Cloud API interaction ##
-## Version 1.5 ##
+## Version 1.6 ##
 ## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -430,8 +430,16 @@ function Add-CloudServer {
         [int]$CloudServerFlavorID,
         [Parameter(Position=2,Mandatory=$true)]
         [string]$CloudServerImageID,
-        [Parameter(Position=3,Mandatory=$true)]
-        [string]$Region
+        [Parameter(Position=3,Mandatory=$false)]
+        [string]$CloudServerNetwork1ID,
+        [Parameter(Position=4,Mandatory=$false)]
+        [string]$CloudServerNetwork2ID,
+        [Parameter(Position=5,Mandatory=$false)]
+        [string]$CloudServerNetwork3ID,
+        [Parameter(Position=6,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=7,Mandatory=$false)]
+        [switch]$Isolated
         )
 
         ## Setting variables needed to execute this function
@@ -440,12 +448,109 @@ function Add-CloudServer {
 
         Get-AuthToken
 
-[xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+    if ($CloudServerNetwork1ID) {
+
+
+        if ($Isolated) {
+            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
             <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
                 imageRef="'+$CloudServerImageID+'"
                 flavorRef="'+$CloudServerFlavorID+'"
                 name="'+$CloudServerName+'">
-           </server>'
+                <networks>
+                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
+                </networks>
+            </server>'
+            }
+
+            else {
+            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+<server xmlns="http://docs.openstack.org/compute/api/v1.1" 
+	imageRef="'+$CloudServerImageID+'" 
+	flavorRef="'+$CloudServerFlavorID+'" 
+	name="'+$CloudServerName+'">
+	<networks>
+		<uuid>00000000-0000-0000-0000-000000000000</uuid>
+		<uuid>11111111-1111-1111-1111-111111111111</uuid>
+		<uuid>'+$CloudServerNetwork1ID+'</uuid>
+	</networks>
+</server>'
+            }
+    }
+
+    elseif ($CloudServerNetwork2ID) {
+
+            if ($Isolated) {
+            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
+                imageRef="'+$CloudServerImageID+'"
+                flavorRef="'+$CloudServerFlavorID+'"
+                name="'+$CloudServerName+'">
+                <networks>
+                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
+                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
+                </networks>
+            </server>'
+            }
+
+            else {
+            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
+                imageRef="'+$CloudServerImageID+'"
+                flavorRef="'+$CloudServerFlavorID+'"
+                name="'+$CloudServerName+'">
+                <networks>
+                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
+                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
+                    <uuid>00000000-0000-0000-0000-000000000000</uuid>
+                    <uuid>11111111-1111-1111-1111-111111111111</uuid>
+                </networks>
+            </server>'
+            }
+
+    }
+
+    elseif ($CloudServerNetwork3ID) {
+
+            if ($Isolated) {
+            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
+                imageRef="'+$CloudServerImageID+'"
+                flavorRef="'+$CloudServerFlavorID+'"
+                name="'+$CloudServerName+'">
+                <networks>
+                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
+                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
+                    <uuid>'+$CloudServerNetwork3ID+'</uuid>
+                </networks>
+            </server>'
+            }
+
+            else {
+            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
+                imageRef="'+$CloudServerImageID+'"
+                flavorRef="'+$CloudServerFlavorID+'"
+                name="'+$CloudServerName+'">
+                <networks>
+                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
+                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
+                    <uuid>'+$CloudServerNetwork3ID+'</uuid>
+                    <uuid>00000000-0000-0000-0000-000000000000</uuid>
+                    <uuid>11111111-1111-1111-1111-111111111111</uuid>
+                </networks>
+            </server>'
+            }
+    }
+
+    else {
+    [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
+                imageRef="'+$CloudServerImageID+'"
+                flavorRef="'+$CloudServerFlavorID+'"
+                name="'+$CloudServerName+'">
+            </server>'
+            }
  
  if ($Region -eq "DFW") {
         
@@ -462,7 +567,7 @@ function Add-CloudServer {
                                    }
 
 elseif ($Region -eq "ORD") {
-
+        
         $NewCloudServer = Invoke-RestMethod -Uri $ORDNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post
         $NewCloudServerInfo = $NewCloudServer.innerxml
 
@@ -495,8 +600,20 @@ else {
  .PARAMETER CloudServerImageID
  Use this parameter to define the ID of the image that you would like to build your new server from.  This can be a Rackspace provided base image, or an existing custom image snapshot that you've previously taken.  If you are unsure of which image to use, run the "Get-CloudServerImages" command.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER CloudServerNetwork1ID
+ Use this parameter to define the UUID of the first custom network you would like this server attached to.  If you do not later use the -Isolated switch, this server will be connected to this network and Rackspace default networks.
+
+ .PARAMETER CloudServerNetwork2ID
+ Use this parameter to define the UUID of the second custom network you would like this server attached to.  If you do not later use the -Isolated switch, this server will be connected to this network and Rackspace default networks. If you have not defined -CloudServerNetowrk1ID, please do NOT use this field.
+
+ .PARAMETER CloudServerNetwork3ID
+ Use this parameter to define the UUID of the second custom network you would like this server attached to.  If you do not later use the -Isolated switch, this server will be connected to this network and Rackspace default networks. If you have not defined -CloudServerNetowrk1ID & -CloudServerNetwork2ID please do NOT use this field.
+
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .PARAMETER Isolated
+ Use this parameter to indiacte that you'd like this server to be in an isolated network.  Using this switch will render this server ONLY connected to the UUIDs of the custom networks you define.
 
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudServer -CloudServerName NewlyCreatedTestServer -CloudServerFlavorID 3 -CloudServerImageID 26fec9f2-2fb5-4e5e-a19f-0d12540ec639 -Region DFW
@@ -1595,7 +1712,7 @@ function Get-CloudLoadBalancerDetails {
             IP = $ip.address
 	    }}
 
-    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
+    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
 
     $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
@@ -1630,7 +1747,7 @@ function Get-CloudLoadBalancerDetails {
             IP = $ip.address
 	    }}
 
-    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
+    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
 
     $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
@@ -1819,7 +1936,7 @@ elseif ($Region -eq "ORD") {
 
         Sleep 10
 
-        Get-CloudServers ORD
+        Get-CloudLoadBalancers ORD
                                    }
 
 else {
@@ -2169,3 +2286,122 @@ else {
  This example shows how to remove a load balancer with an ID of 12345 in the DFW region.
 #>
 }
+
+<#  THIS CODE IS NOT READY YET
+function Update-CloudLoadBalancer {
+    
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$false)]
+        [string]$CloudLBName,
+        [Parameter(Position=2,Mandatory=$false)]
+        [string]$CloudLBPort,
+        [Parameter(Position=3,Mandatory=$false)]
+        [string]$CloudLBProtocol,
+        [Parameter(Position=4,Mandatory=$false)]
+        [string]$CloudLBAlgorithm,
+        [Parameter(Position=5,Mandatory=$false)]
+        [string]$CloudLBTimeout,
+        [Parameter(Position=6,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+        Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+
+        Get-AuthToken
+
+        if ($CloudLBName) {
+            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+            name="'+$CloudLBName+'"/>'
+        }
+
+        elseif ($CloudLBPort) {
+            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+            port="'+$CloudLBPort+'"/>'
+        }
+
+        elseif ($CloudLBProtocol) {
+            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+            protocol="'+$CloudLBProtocol+'"/>'
+        }
+
+        elseif ($CloudLBAlgorithm) {
+            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+            algorithm="'+$CloudLBAlgorithm+'"/>'
+        }
+
+        [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+            name="'+$CloudLBName+'"
+            algorithm="'+$CloudLBAlgorithm+'"
+            protocol="'+$CloudLBProtocol+'"
+            port="'+$CloudLBPort+'"
+            timeout="'+$CloudLBTimeout+'"/>'
+
+ if ($Region -eq "DFW") {
+        
+        $UpdateCloudLB = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put
+
+        Write-Host "Your load balancer has been updated. Updated information will be shown in 10 seconds:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID DFW
+}
+
+elseif ($Region -eq "ORD") {
+
+        $UpdateCloudLB = Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put
+
+        Write-Host "Your load balancer has been updated. Updated information will be shown in 10 seconds:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID ORD
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-CloudLoadBalancer cmdlet will create a new Rackspace cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBName
+ Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+
+ .PARAMETER CloudLBPort
+ Use this parameter to define the TCP/UDP port number of the load balancer you are creating.
+
+.PARAMETER CloudLBProtocol
+ Use this parameter to define the protocol that will bind to this load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-LoadBalancerProtocols" cmdlet.
+
+ .PARAMETER CloudLBAlgorithm
+ Use this parameter to define the load balancing algorithm you'd like to use with your new load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-LoadBalancerAlgorithms" cmdlet.
+
+ .PARAMETER CloudLBNodeIP
+ Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This must be a functional and legitimate IP, or this command will fail run properly.
+
+ .PARAMETER CloudLBNodePort
+ Use this parameter to define the port number of the first node you wish to have served by this load balancer.
+
+ .PARAMETER CloudLBNodeCondition
+ Use this parameter to define the condition of the first node you wish to have served by this load balancer. Accepted values in this field are:
+
+ "ENABLED"  - Node is permitted to accept new connections
+ "DISABLED" - Node is nor permitted to accept any new connections. Existing connections are forcibly terminated.
+
+.PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
+ This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+}
+#>
