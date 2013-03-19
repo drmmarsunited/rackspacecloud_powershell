@@ -20,7 +20,7 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
  
 <b>Powershell Execution Policy</b>
 
-* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" and then "Import-Module RSCloud".
+* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" as a local/domain admin on your server.
 
 <h2>How to Install</h2>
 
@@ -40,7 +40,7 @@ For the sake of ease, place the “RSCloud” folder in the 2nd listed folder ab
 2.	Set-Variable -Name CloudAPIKey -Value "Your API key here" -Scope Global
 3.	Set-Variable -Name CloudDDI -Value "Your account number/DDI here" -Scope Global 
 
-After editing the file, please save it!  You can then launch Powershell, and run “Get-Modules – ListAvailable” to verify that the module is in the list and the commands it offers.
+After editing the file, please save it!  You can then launch Powershell, and run "Import-Module RSCloud". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
 
 <h2>Additional Information</h2>
 
