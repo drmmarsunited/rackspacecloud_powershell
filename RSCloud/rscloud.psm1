@@ -1419,6 +1419,72 @@ else {
 
 ## Cloud Block Storage Cmdlets
 
+function Get-CloudBlockStorageTypes {
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWCBSURI -Value "https://dfw.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/types.xml"
+    Set-Variable -Name ORDCBSURI -Value "https://ord.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/types.xml"
+
+        if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available volumes and storing data into a variable
+    [xml]$VolTypeStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary)
+    [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
+
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $VolTypeFinal.volume_types.volume_type | ft $VolTypeTable -AutoSize
+    }
+
+    elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available volumes and storing data into a variable
+    [xml]$VolTypeStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary)
+    [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
+
+        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        $VolTypeFinal.volume_types.volume_type | ft $VolTable -AutoSize
+    }
+
+    else {
+
+    Send-RegionError
+
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudBlockStorageVol cmdlet will retrieve a list of all attributes for a provided cloud block storage volume.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudBlockStorageVolID
+ Use this parameter to define the ID of the cloud block storage volume that you would like to query.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudBlockStorageVol -Region DFW 
+ This example shows how to list all cloud block storage volumes in the DFW region.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudBlockStorageVol ORD
+ This example shows how to list all cloud block storage volumes in the ORD region, without parameter names.
+#>
+}
+
+
 function Get-CloudBlockStorageVolList {
 
     Param(
@@ -1548,28 +1614,56 @@ function Get-CloudBlockStorageVol {
 #>
 }
 
-function Get-CloudBlockStorageTypes {
+function Add-CloudBlockStorageVol {
 
     Param(
-        [Parameter (Position=0, Mandatory=$true)]
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $CloudBlockStorageVolName,
+        [Parameter (Position=2, Mandatory=$false)]
+        [string] $CloudBlockStorageVolDesc,
+        [Parameter (Position=2, Mandatory=$true)]
+        [int] $CloudBlockStorageVolSize,
+        [Parameter (Position=2, Mandatory=$true)]
+        [string] $CloudBlockStorageVolType,
+        [Parameter (Position=3, Mandatory=$true)]
         [string] $Region
     )
 
-    ## Setting variables needed to execute this function
-    Set-Variable -Name DFWCBSURI -Value "https://dfw.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/types.xml"
-    Set-Variable -Name ORDCBSURI -Value "https://ord.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/types.xml"
+    ## Force switch variable setting
+    if ($CloudBlockStorageVolSize -lt 100) {
+        Write-Host "You must enter a volume size of greater than 100GB." -ForegroundColor Red
+        break
+    }
 
-        if ($Region -eq "DFW") {    
+    elseif ($CloudBlockStorageVolSize -gt 1024) {
+        Write-Host "You must enter a volume size of less than 1024GB." -ForegroundColor Red
+        Break
+    }
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWCBSURI -Value "https://dfw.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes.xml"
+    Set-Variable -Name ORDCBSURI -Value "https://ord.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes.xml"
+
+    ## Create XML request
+    [xml]$NewVolXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+<volume xmlns="http://docs.rackspace.com/volume/api/v1"
+        display_name="'+$CloudBlockStorageVolName+'"
+        display_description="'+$CloudBlockStorageVolDesc+'"
+        size="'+$CloudBlockStorageVolSize+'"
+        volume_type="'+$CloudBlockStorageVolType+'">
+ 
+</volume>'
+
+    if ($Region -eq "DFW") {
     
     ## Retrieving authentication token
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolTypeStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary)
-    [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -ContentType application/xml -Method Post)
+    [xml]$VolFinal = ($VolStep0.innerxml)
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolTypeFinal.volume_types.volume_type | ft $VolTypeTable -AutoSize
+        $VolFinal.volume | ft $VolTable -AutoSize
     }
 
     elseif ($Region -eq "ORD") {    
@@ -1578,11 +1672,10 @@ function Get-CloudBlockStorageTypes {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolTypeStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary)
-    [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -Method Post)
+    [xml]$VolFinal = ($VolSnapStep0.innerxml)
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolTypeFinal.volume_types.volume_type | ft $VolTable -AutoSize
+        $VolFinal.volume | ft $VolTable -AutoSize
     }
 
     else {
@@ -1592,26 +1685,97 @@ function Get-CloudBlockStorageTypes {
     }
 <#
  .SYNOPSIS
- The Get-CloudBlockStorageVol cmdlet will retrieve a list of all attributes for a provided cloud block storage volume.
+ The Add-CloudBlockStorageVol cmdlet will add a cloud block storage volume.
+
+ .DESCRIPTION
+ See synopsis.
+
+  .PARAMETER CloudBlockStorageVolName
+ Use this parameter to define the name of the volume you are about to make.
+
+ .PARAMETER CloudBlockStorageVolDesc
+ Use this parameter to define the description of the volume you are about to make.
+
+ .PARAMETER CloudBlockStorageVolSize
+ Use this parameter to define the size of the volume you are about to make. This must be between 100 and 1024.
+
+ .PARAMETER CloudBlockStorageVolType
+ Use this parameter to define the type of the volume you are about to make. If you are unsure of what to enter, please run the Get-CloudBlockStorageTypes cmdlet to get valid parameter entries.
+ 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudBlockStorageVol -CloudBlockStorageVolName Test2 -CloudBlockStorageVolDesc "another backupt test" -CloudBlockStorageVolSize 150 -CloudBlockStorageVolType SATA -Region dfw
+ This example shows how to add a cloud block storage volume in the DFW region.
+#>
+}
+
+function Remove-CloudBlockStorageVol {
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $CloudBlockStorageVolID,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWCBSURI -Value "https://dfw.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID.xml"
+    Set-Variable -Name ORDCBSURI -Value "https://ord.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID.xml"
+
+    if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available volumes and storing data into a variable
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Method Delete)
+    [xml]$VolFinal = ($VolStep0.innerxml)
+
+        Write-Host "The volume has been deleted."
+    }
+
+    elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available volumes and storing data into a variable
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Method Delete)
+    [xml]$VolFinal = ($VolStep0.innerxml)
+
+        Write-Host "The volume has been deleted."
+    }
+
+    else {
+
+    Send-RegionError
+
+    }
+<#
+ .SYNOPSIS
+ The Remove-CloudBlockStorageVol cmdlet will remove a cloud block storage volume.
 
  .DESCRIPTION
  See synopsis.
 
  .PARAMETER CloudBlockStorageVolID
- Use this parameter to define the ID of the cloud block storage volume that you would like to query.
+ Use this parameter to define the ID of the cloud block storage volume that you would like to remove.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol -Region DFW 
- This example shows how to list all cloud block storage volumes in the DFW region.
+ PS C:\Users\Administrator> Remove-CloudBlockStorageVol  -CloudBlockStorageVolID 5ea333b3-cdf7-40ee-af60-9caf871b15fa -Region dfw
+ This example shows how to remove a cloud block storage volume from the DFW region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol ORD
- This example shows how to list all cloud block storage volumes in the ORD region, without parameter names.
+ PS C:\Users\Administrator> Remove-CloudBlockStorageVol 5ea333b3-cdf7-40ee-af60-9caf871b15fa ORD
+ This example shows how to list details for a cloud block storage volume in the DFW region, without parameter names.
 #>
 }
+
 
 function Get-CloudBlockStorageSnapList {
 
@@ -1742,6 +1906,100 @@ function Get-CloudBlockStorageSnap {
 #>
 }
 
+function Add-CloudBlockStorageSnap {
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $CloudBlockStorageVolID,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $CloudBlockStorageSnapName,
+        [Parameter (Position=2, Mandatory=$false)]
+        [string] $CloudBlockStorageSnapDesc,
+        [Parameter (Position=3, Mandatory=$true)]
+        [string] $Region,
+        [Parameter (Position=4, Mandatory=$false)]
+        [switch] $Force
+    )
+
+    ## Force switch variable setting
+    if ($force) {
+        $ForceOut = "true"
+    }
+
+    else {
+        $ForceOut = "false"
+    }
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWCBSURI -Value "https://dfw.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots.xml"
+    Set-Variable -Name ORDCBSURI -Value "https://ord.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots.xml"
+
+    ## Create XML request
+    [xml]$NewSnapXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
+<snapshot xmlns="http://docs.rackspace.com/volume/api/v1"
+          name="'+$CloudBlockStorageSnapName+'"
+          display_name="'+$CloudBlockStorageSnapName+'"
+          display_description="'+$CloudBlockStorageSnapDesc+'"
+          volume_id="'+$CloudBlockStorageVolID+'"
+          force="'+$ForceOut+'" />'
+
+    if ($Region -eq "DFW") {
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available volumes and storing data into a variable
+    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -ContentType application/xml -Method Post)
+    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+
+        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
+    }
+
+    elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available volumes and storing data into a variable
+    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -Method Post)
+    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+
+        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
+    }
+
+    else {
+
+    Send-RegionError
+
+    }
+<#
+ .SYNOPSIS
+ The Add-CloudBlockStorageSnap cmdlet will add a cloud block storage snapshot.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudBlockStorageVolID
+ Use this parameter to define the ID of the cloud block storage volume that you would like to snapshot.
+
+ .PARAMETER CloudBlockStorageSnapName
+ Use this parameter to define the name of the snapshot you are about to take.
+
+ .PARAMETER CloudBlockStorageSnapDesc
+ Use this parameter to define the description of the snapshot you are about to take.
+
+ .PARAMETER Force
+ Use this switch to indicate whether to snapshot the volume, even if the volume is attached and in use.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudBlockStorageSnap -CloudBlockStorageVolID 5ea333b3-cdf7-40ee-af60-9caf871b15fa -CloudBlockStorageSnapName Snapshot-Test -CloudBlockStorageSnapDesc This is a test snapshot -Region DFW -Force
+ This example shows how to add a cloud block storage snapshot in the DFW region.
+#>
+}
+
 function Remove-CloudBlockStorageSnap {
 
     Param(
@@ -1802,96 +2060,15 @@ function Remove-CloudBlockStorageSnap {
  This example shows how to remove a cloud block storage snapshot from the DFW region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Remove-CloudBlockStorageVol 5ea333b3-cdf7-40ee-af60-9caf871b15fa ORD
+ PS C:\Users\Administrator> Remove-CloudBlockStorageSnap 5ea333b3-cdf7-40ee-af60-9caf871b15fa ORD
  This example shows how to list details for a cloud block storage snapshot in the DFW region, without parameter names.
 #>
 }
 
-<#
-function Add-CloudBlockStorageSnap {
 
-    Param(
-        [Parameter (Position=0, Mandatory=$true)]
-        [string] $CloudBlockStorageVolID,
-        [Parameter (Position=1, Mandatory=$false)]
-        [string] $CloudBlockStorageSnapName,
-        [Parameter (Position=2, Mandatory=$false)]
-        [string] $CloudBlockStorageSnapDesc,
-        [Parameter (Position=3, Mandatory=$true)]
-        [string] $Region,
-        [Parameter (Position=4, Mandatory=$false)]
-        [switch] $Force
-    )
 
-    ## Force switch variable setting
-    if ($force) {
-        $ForceOut = "True"
-    }
 
-    else {
-        $ForceOut = "False"
-    }
 
-    ## Setting variables needed to execute this function
-    #$DFWCBSURI = 'https://dfw.blockstorage.api.rackspacecloud.com/v1/'+$CloudDDI+'/snapshots​?snapshot="True"&​volume_id="'+$CloudBlockStorageVolID+'"&​force="'+$ForceOut+'"&​display_name="'+$CloudBlockStorageSnapName+'"&​display_description="'+$CloudBlockStorageSnaDesc+'"'
-    #$ORDCBSURI = 'https://ord.blockstorage.api.rackspacecloud.com/v1/'+$CloudDDI+'/snapshots​?snapshot="True"&​volume_id="'+$CloudBlockStorageVolID+'"&​force="'+$ForceOut+'"&​display_name="'+$CloudBlockStorageSnapName+'"&​display_description="'+$CloudBlockStorageSnaDesc+'"'
-
-        if ($Region -eq "DFW") {
-    
-    ## Retrieving authentication token
-    Get-AuthToken
-
-    ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Method Post)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
-
-        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
-    }
-
-    elseif ($Region -eq "ORD") {    
-    
-    ## Retrieving authentication token
-    Get-AuthToken
-
-    ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -Method Post)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
-
-        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
-    }
-
-    else {
-
-    Send-RegionError
-
-    }
-<#
- .SYNOPSIS
- The Add-CloudBlockStorageSnap cmdlet will add a cloud block storage snapshot.
-
- .DESCRIPTION
- See synopsis.
-
- .PARAMETER CloudBlockStorageVolID
- Use this parameter to define the ID of the cloud block storage volume that you would like to snapshot.
-
- .PARAMETER CloudBlockStorageSnapName
- Use this parameter to define the name of the snapshot you are about to take.
-
- .PARAMETER CloudBlockStorageSnapDesc
- Use this parameter to define the description of the snapshot you are about to take.
-
- .PARAMETER Force
- Use this switch to indicate whether to snapshot the volume, even if the volume is attached and in use.
-
- .PARAMETER Region
- Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
-
- .EXAMPLE
- PS C:\Users\Administrator> Add-CloudBlockStorageSnap -CloudBlockStorageVolID 5ea333b3-cdf7-40ee-af60-9caf871b15fa -CloudBlockStorageSnapName Snapshot-Test -CloudBlockStorageSnapDesc This is a test snapshot -Region DFW -Force
- This example shows how to add a cloud block storage snapshot in the DFW region.
-#>
-}
 
 ## Cloud Network API Cmdlets
 
