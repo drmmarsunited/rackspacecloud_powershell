@@ -43,6 +43,15 @@ $LBDetailListTable = @{Expression={$_.id};Label="CLB ID";width=15},
 @{Expression={$_.nodes.node.condition};Label="Node Condition";width=10},
 @{Expression={$_.nodes.node.status};Label="Node Status";width=10}
 
+$NodeServiceEventTable = @{Expression={$_.NodeId};Label="Node ID";width=7},
+@{Expression={$_.detailedMessage};Label="Node Msg";width=40},
+@{Expression={$_.loadbalancerId};Label="CLB ID";width=7},
+@{Expression={$_.title};Label="Msg Title";width=40},
+@{Expression={$_.description};Label="Msg Description";width=250},
+@{Expression={$_.type};Label="Msg Type";width=25},
+@{Expression={$_.severity};Label="Msg Severity";width=10},
+@{Expression={$_.created};Label="Msg Created";width=40}
+
 $FlavorListTable = @{Expression={$_.id};Label="Flavor ID";width=3}, 
 @{Expression={$_.Name};Label="Flavor Name";width=40}, 
 @{Expression={$_.ram};Label="RAM (in MB)";width=38},
@@ -586,7 +595,7 @@ function Add-CloudServer {
  
  if ($Region -eq "DFW") {
         
-        $NewCloudServer = Invoke-RestMethod -Uri $DFWNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post
+        $NewCloudServer = Invoke-RestMethod -Uri $DFWNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         $NewCloudServerInfo = $NewCloudServer.innerxml
 
         Write-Host "The following is the ID and password of your new server. Please wait 10 seconds for a refreshed Cloud Server list."
@@ -600,7 +609,7 @@ function Add-CloudServer {
 
 elseif ($Region -eq "ORD") {
         
-        $NewCloudServer = Invoke-RestMethod -Uri $ORDNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post
+        $NewCloudServer = Invoke-RestMethod -Uri $ORDNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         $NewCloudServerInfo = $NewCloudServer.innerxml
 
         Write-Host "The following is the ID and password of your new server. Please wait 10 seconds for a refreshed Cloud Server list."
@@ -678,7 +687,7 @@ if ($Region -eq "DFW") {
     
     Set-Variable -Name ServerImageURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerImageURI -Headers $HeaderDictionary -Body $NewImageXMLBody -ContentType application/xml -Method Post
+    Invoke-RestMethod -Uri $ServerImageURI -Headers $HeaderDictionary -Body $NewImageXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your new Rackspace Cloud Server image is being created."
 
@@ -690,7 +699,7 @@ elseif ($Region -eq "ORD") {
     
     Set-Variable -Name ServerImageURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerImageURI -Headers $HeaderDictionary -Body $NewImageXMLBody -ContentType application/xml -Method Post
+    Invoke-RestMethod -Uri $ServerImageURI -Headers $HeaderDictionary -Body $NewImageXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your new Rackspace Cloud Server image is being created."
 
@@ -756,7 +765,7 @@ if ($Region -eq "DFW") {
     
     Set-Variable -Name ServerUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Put | Out-Null
+    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
                 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -779,7 +788,7 @@ if ($Region -eq "DFW") {
     
     Set-Variable -Name ServerUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post | Out-Null
+    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -802,7 +811,7 @@ if ($Region -eq "DFW") {
     
     Set-Variable -Name ServerUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post | Out-Null
+    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -824,7 +833,7 @@ if ($Region -eq "DFW") {
     
     Set-Variable -Name ServerPasswordUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerPasswordUpdateURI -Headers $HeaderDictionary -Body $UpdateAdminPasswordXMLBody -ContentType application/xml -Method Post
+    Invoke-RestMethod -Uri $ServerPasswordUpdateURI -Headers $HeaderDictionary -Body $UpdateAdminPasswordXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your Cloud Server has been updated."
                         }
@@ -844,7 +853,7 @@ elseif ($Region -eq "ORD") {
     
     Set-Variable -Name ServerUpdateURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Put | Out-Null
+    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
                 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -867,7 +876,7 @@ elseif ($Region -eq "ORD") {
     
     Set-Variable -Name ServerUpdateURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post | Out-Null
+    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -889,7 +898,7 @@ elseif ($Region -eq "ORD") {
     
     Set-Variable -Name ServerUpdateURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post | Out-Null
+    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -909,7 +918,7 @@ elseif ($Region -eq "ORD") {
     
     Set-Variable -Name ServerPasswordUpdateURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerPasswordUpdateURI -Headers $HeaderDictionary -Body $UpdateAdminPasswordXMLBody -ContentType application/xml -Method Post
+    Invoke-RestMethod -Uri $ServerPasswordUpdateURI -Headers $HeaderDictionary -Body $UpdateAdminPasswordXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your Cloud Server has been updated."
                         }
@@ -985,7 +994,7 @@ if ($Region -eq "DFW") {
 
     Set-Variable -Name ServerRestartURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post
+    Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your Cloud Server will be soft rebooted based on your input."
 
@@ -999,7 +1008,7 @@ if ($Region -eq "DFW") {
 
         Set-Variable -Name ServerRestartURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action" -Scope Global
 
-        Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post
+        Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
         Write-Host "Your Cloud Server will be hard rebooted based on your input."
                 }
@@ -1012,7 +1021,7 @@ elseif ($Region -eq "ORD") {
 
     Set-Variable -Name ServerRestartURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post
+    Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your Cloud Server will be soft rebooted based on your input."
 
@@ -1024,7 +1033,7 @@ elseif ($Region -eq "ORD") {
 
         Set-Variable -Name ServerRestartURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action" -Scope Global
 
-        Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post
+        Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
         Write-Host "Your Cloud Server will be hard rebooted based on your input."
                 }
@@ -1084,7 +1093,7 @@ if ($Region -eq "DFW") {
 
       Set-Variable -Name ServerConfirmURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post
+      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
       Write-Host "Your resized server has been confirmed."
 
@@ -1099,7 +1108,7 @@ if ($Region -eq "DFW") {
 
       Set-Variable -Name ServerConfirmURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post
+      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
       Write-Host "Your resized server has been confirmed."
 
@@ -1208,7 +1217,7 @@ if ($Region -eq "DFW") {
     ## Setting variables needed to execute this function
     Set-Variable -Name ServerDeleteURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
     
-    Invoke-RestMethod -Uri $ServerDeleteURI -Headers $HeaderDictionary -Method Delete
+    Invoke-RestMethod -Uri $ServerDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
     Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
 
@@ -1221,7 +1230,7 @@ elseif ($Region -eq "ORD") {
     ## Setting variables needed to execute this function
     Set-Variable -Name ServerDeleteURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
     
-    Invoke-RestMethod -Uri $ServerDeleteURI -Headers $HeaderDictionary -Method Delete
+    Invoke-RestMethod -Uri $ServerDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
     Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
 
@@ -1266,7 +1275,7 @@ if ($Region -eq "DFW") {
     ## Setting variables needed to execute this function
     Set-Variable -Name DFWImageDeleteURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
 
-    Invoke-RestMethod -Uri $DFWImageDeleteURI -Headers $HeaderDictionary -Method Delete
+    Invoke-RestMethod -Uri $DFWImageDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
     Write-Host "Your Rackspace Cloud Server Image has been deleted."
 
@@ -1279,7 +1288,7 @@ elseif ($Region -eq "ORD") {
     ## Setting variables needed to execute this function
     Set-Variable -Name ordImageDeleteURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
 
-    Invoke-RestMethod -Uri $ORDImageDeleteURI -Headers $HeaderDictionary -Method Delete
+    Invoke-RestMethod -Uri $ORDImageDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
     Write-Host "Your Rackspace Cloud Server Image has been deleted."
 
@@ -1332,7 +1341,7 @@ if ($Region -eq "DFW") {
     ## Setting variables needed to execute this function
     Set-Variable -Name RescueModeDFWURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeDFWURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post
+    $RescueMode = Invoke-RestMethod -Uri $RescueModeDFWURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
     $RescueModePass = $RescueMode.adminPass
 
     Write-Host "Rescue Mode takes 5 - 10 minutes to enable. Please do not interact with this server again until it's status is RESCUE.
@@ -1350,7 +1359,7 @@ elseif ($Region -eq "ORD") {
     ## Setting variables needed to execute this function
     Set-Variable -Name RescueModeORDURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeORDURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post
+    $RescueMode = Invoke-RestMethod -Uri $RescueModeORDURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
     $RescueModePass = $RescueMode.adminPass
 
     Write-Host "Rescue Mode takes 5 - 10 minutes to enable. Please do not interact with this server again until it's status is RESCUE.
@@ -1389,7 +1398,7 @@ if ($Region -eq "DFW") {
     ## Setting variables needed to execute this function
     Set-Variable -Name RescueModeDFWURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeDFWURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post
+    $RescueMode = Invoke-RestMethod -Uri $RescueModeDFWURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your server is being restored to normal service.  Please wait for the status of the server to show ACTIVE before carrying out any further commands against it."
 
@@ -1402,7 +1411,7 @@ elseif ($Region -eq "ORD") {
     ## Setting variables needed to execute this function
     Set-Variable -Name RescueModeORDURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeORDURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post
+    $RescueMode = Invoke-RestMethod -Uri $RescueModeORDURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
 
     Write-Host "Your server is being restored to normal service.  Please wait for the status of the server to show ACTIVE before carrying out any further commands against it."
 
@@ -1415,6 +1424,7 @@ else {
     }
 
 }
+
 
 
 ## Cloud Block Storage Cmdlets
@@ -1483,7 +1493,6 @@ function Get-CloudBlockStorageTypes {
  This example shows how to list all cloud block storage volumes in the ORD region, without parameter names.
 #>
 }
-
 
 function Get-CloudBlockStorageVolList {
 
@@ -1660,7 +1669,7 @@ function Add-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -ContentType application/xml -Method Post)
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
     [xml]$VolFinal = ($VolStep0.innerxml)
 
         $VolFinal.volume | ft $VolTable -AutoSize
@@ -1672,7 +1681,7 @@ function Add-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -Method Post)
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
     [xml]$VolFinal = ($VolSnapStep0.innerxml)
 
         $VolFinal.volume | ft $VolTable -AutoSize
@@ -1730,7 +1739,7 @@ function Remove-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Method Delete)
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
     [xml]$VolFinal = ($VolStep0.innerxml)
 
         Write-Host "The volume has been deleted."
@@ -1742,7 +1751,7 @@ function Remove-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Method Delete)
+    [xml]$VolStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
     [xml]$VolFinal = ($VolStep0.innerxml)
 
         Write-Host "The volume has been deleted."
@@ -1775,7 +1784,6 @@ function Remove-CloudBlockStorageVol {
  This example shows how to list details for a cloud block storage volume in the DFW region, without parameter names.
 #>
 }
-
 
 function Get-CloudBlockStorageSnapList {
 
@@ -1949,7 +1957,7 @@ function Add-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -ContentType application/xml -Method Post)
+    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
     [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
 
         $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
@@ -1961,7 +1969,7 @@ function Add-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -Method Post)
+    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
     [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
 
         $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
@@ -2019,7 +2027,7 @@ function Remove-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Method Delete)
+    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $DFWCBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
     [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
 
         Write-Host "The snapshot has been deleted."
@@ -2031,7 +2039,7 @@ function Remove-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Method Delete)
+    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $ORDCBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
     [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
 
         Write-Host "The snapshot has been deleted."
@@ -2064,9 +2072,6 @@ function Remove-CloudBlockStorageSnap {
  This example shows how to list details for a cloud block storage snapshot in the DFW region, without parameter names.
 #>
 }
-
-
-
 
 
 
@@ -2161,7 +2166,7 @@ function Add-CloudNetwork {
  
  if ($Region -eq "DFW") {
         
-        $NewCloudNet = Invoke-RestMethod -Uri $DFWNewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post
+        $NewCloudNet = Invoke-RestMethod -Uri $DFWNewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudNetInfo = $NewCloudNet.innerxml
 
         Write-Host "You have just created the following cloud network:"
@@ -2172,7 +2177,7 @@ function Add-CloudNetwork {
 
 elseif ($Region -eq "ORD") {
 
-        $NewCloudNet = Invoke-RestMethod -Uri $ORDNewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post
+        $NewCloudNet = Invoke-RestMethod -Uri $ORDNewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudNetInfo = $NewCloudNet.innerxml
 
         Write-Host "You have just created the following cloud network:"
@@ -2268,6 +2273,7 @@ else {
  This example shows how to delete a cloud network with an ID of 88e316b1-8e69-4591-ba92-bea8bb1837f5 from the DFW region, without the parameter names.
 #>
 }
+
 
 
 ## Cloud Load Balancer API Cmdlets
@@ -2564,7 +2570,7 @@ function Add-CloudLoadBalancer {
  
  if ($Region -eq "DFW") {
         
-        $NewCloudLB = Invoke-RestMethod -Uri $DFWNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
+        $NewCloudLB = Invoke-RestMethod -Uri $DFWNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
 
         Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
@@ -2595,7 +2601,7 @@ function Add-CloudLoadBalancer {
 
 elseif ($Region -eq "ORD") {
 
-        $NewCloudLB = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post
+        $NewCloudLB = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
 
         Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
@@ -2668,7 +2674,7 @@ else {
 #>
 }
 
-function Get-CloudLoadBalancerNodes{
+function Get-CloudLoadBalancerNodeList{
 
     Param(
         [Parameter(Position=0,Mandatory=$true)]
@@ -2741,7 +2747,7 @@ else {
     }
 <#
  .SYNOPSIS
- The Get-CloudLoadBalancerNodes cmdlet will pull down a list of all nodes that are currently provisioned behind the specified load balancer.
+ The Get-CloudLoadBalancerNodeList cmdlet will pull down a list of all nodes that are currently provisioned behind the specified load balancer.
 
  .DESCRIPTION
  See the synopsis field.
@@ -2753,11 +2759,11 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancerNodes -CloudLBID 12345 -Region DFW
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList -CloudLBID 12345 -Region DFW
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the DFW region.
 
   .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancerNodes 12345 ORD
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList 12345 ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
 #>
 }
@@ -2801,7 +2807,7 @@ function Add-CloudLoadBalancerNode {
  
  if ($Region -eq "DFW") {
         
-        $NewCloudLBNode = Invoke-RestMethod -Uri $DFWNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
+        $NewCloudLBNode = Invoke-RestMethod -Uri $DFWNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
 	
     Write-Host "The node has been added as follows:"
@@ -2811,7 +2817,7 @@ function Add-CloudLoadBalancerNode {
 
 elseif ($Region -eq "ORD") {
 
-        $NewCloudLBNode = Invoke-RestMethod -Uri $ORDNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post
+        $NewCloudLBNode = Invoke-RestMethod -Uri $ORDNewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
 	
 	    Write-Host "The node has been added as follows:"
@@ -2848,8 +2854,8 @@ else {
  .Parameter CloudLBNodeType
  Use this parameter to define the type of node you are adding to the load balancer.  Allowable node types are:
  
- "PRIMARY"   â€“ Nodes defined as PRIMARY are in the normal rotation to receive traffic from the load balancer.
- "SECONDARY" â€“ Nodes defined as SECONDARY are only in the rotation to receive traffic from the load balancer when all the primary nodes fail.
+ "PRIMARY"   - Nodes defined as PRIMARY are in the normal rotation to receive traffic from the load balancer.
+ "SECONDARY" - Nodes defined as SECONDARY are only in the rotation to receive traffic from the load balancer when all the primary nodes fail.
  
  .Parameter CloudLBNodeWeight
  Use this parameter to definte the weight of the node you are adding to the load balancer.  This parameter is only required if you are adding a node to a load balancer that is utilizing a weighted load balancing algorithm.
@@ -2972,23 +2978,32 @@ else {
 #>
 }
 
-<#  THIS CODE IS NOT READY YET
 function Update-CloudLoadBalancer {
     
     Param(
-        [Parameter(Position=0,Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeName,
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangePort,
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeProtocol,
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeAlgorithm,
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeTimeout,
+        [Parameter(Mandatory=$true)]
         [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$false)]
+        [Parameter(Mandatory=$false)]
         [string]$CloudLBName,
-        [Parameter(Position=2,Mandatory=$false)]
+        [Parameter(Mandatory=$false)]
         [string]$CloudLBPort,
-        [Parameter(Position=3,Mandatory=$false)]
+        [Parameter(Mandatory=$false)]
         [string]$CloudLBProtocol,
-        [Parameter(Position=4,Mandatory=$false)]
+        [Parameter(Mandatory=$false)]
         [string]$CloudLBAlgorithm,
-        [Parameter(Position=5,Mandatory=$false)]
+        [Parameter(Mandatory=$false)]
         [string]$CloudLBTimeout,
-        [Parameter(Position=6,Mandatory=$true)]
+        [Parameter(Mandatory=$true)]
         [string]$Region
         )
 
@@ -2998,36 +3013,34 @@ function Update-CloudLoadBalancer {
 
         Get-AuthToken
 
-        if ($CloudLBName) {
+        if ($ChangeName) {
             [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
             name="'+$CloudLBName+'"/>'
         }
 
-        elseif ($CloudLBPort) {
+        elseif ($ChangePort) {
             [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
             port="'+$CloudLBPort+'"/>'
         }
 
-        elseif ($CloudLBProtocol) {
+        elseif ($ChangeProtocol) {
             [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
             protocol="'+$CloudLBProtocol+'"/>'
         }
 
-        elseif ($CloudLBAlgorithm) {
+        elseif ($ChangeAlgorithm) {
             [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
             algorithm="'+$CloudLBAlgorithm+'"/>'
         }
 
-        [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-            name="'+$CloudLBName+'"
-            algorithm="'+$CloudLBAlgorithm+'"
-            protocol="'+$CloudLBProtocol+'"
-            port="'+$CloudLBPort+'"
+        elseif ($ChangeTimeout) {
+            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
             timeout="'+$CloudLBTimeout+'"/>'
+        }
 
  if ($Region -eq "DFW") {
         
-        $UpdateCloudLB = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put
+        $UpdateCloudLB = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
         Write-Host "Your load balancer has been updated. Updated information will be shown in 10 seconds:"
 
@@ -3038,7 +3051,7 @@ function Update-CloudLoadBalancer {
 
 elseif ($Region -eq "ORD") {
 
-        $UpdateCloudLB = Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put
+        $UpdateCloudLB = Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
         Write-Host "Your load balancer has been updated. Updated information will be shown in 10 seconds:"
 
@@ -3053,34 +3066,43 @@ else {
     }
 <#
  .SYNOPSIS
- The Add-CloudLoadBalancer cmdlet will create a new Rackspace cloud load balancer in the specified region.
+ The Update-CloudLoadBalancer cmdlet will update a cloud load balancer in the specified region.
 
  .DESCRIPTION
  See synopsis.
 
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
  .PARAMETER CloudLBName
- Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+ Use this parameter to define the name of the specified load balancer.
 
  .PARAMETER CloudLBPort
- Use this parameter to define the TCP/UDP port number of the load balancer you are creating.
+ Use this parameter to define the TCP/UDP port number of the specified load balancer.
 
 .PARAMETER CloudLBProtocol
- Use this parameter to define the protocol that will bind to this load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-LoadBalancerProtocols" cmdlet.
+ Use this parameter to define the protocol of the specified load balancer.  If you are unsure, you can get a list of supported protocols and ports by running the "Get-LoadBalancerProtocols" cmdlet.
 
  .PARAMETER CloudLBAlgorithm
- Use this parameter to define the load balancing algorithm you'd like to use with your new load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-LoadBalancerAlgorithms" cmdlet.
+ Use this parameter to define the load balancing algorithm you'd like to use with your load balancer.  If you are unsure, you can get a list of supported algorithms by running the "Get-LoadBalancerAlgorithms" cmdlet.
 
- .PARAMETER CloudLBNodeIP
- Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This must be a functional and legitimate IP, or this command will fail run properly.
- 
- .PARAMETER CloudLBNodePort
- Use this parameter to define the port number of the first node you wish to have served by this load balancer.
+ .PARAMETER CloudLBTimeout
+ Use this parameter to define the timeout value of the specified load balancer.
 
- .PARAMETER CloudLBNodeCondition
- Use this parameter to define the condition of the first node you wish to have served by this load balancer. Accepted values in this field are:
+ .PARAMETER ChangeName
+ Use this switch to specify that you are changing the name of the load balancer.
 
- "ENABLED"  - Node is permitted to accept new connections
- "DISABLED" - Node is nor permitted to accept any new connections. Existing connections are forcibly terminated.
+ .PARAMETER ChangePort
+ Use this switch to specify that you are changing the port of the load balancer.
+
+ .PARAMETER ChangeProtocol
+ Use this switch to specify that you are changing the protocol of the load balancer.
+
+ .PARAMETER ChangeAlgorithm
+ Use this switch to specify that you are changing the algorithm of the load balancer.
+
+ .PARAMETER ChangeTimeout
+ Use this switch to specify that you are changing the timeout of the load balancer.
 
 .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -3088,5 +3110,292 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
-}
 #>
+}
+
+function Update-CloudLoadBalancerNode {
+    
+    Param(
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeCondition,
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeType,
+        [Parameter(Mandatory=$false)]
+        [switch]$ChangeWeight,
+        [Parameter(Mandatory=$false)]
+        [string]$CloudLBID,
+        [Parameter(Mandatory=$false)]
+        [string]$CloudLBNodeID,
+        [Parameter(Mandatory=$false)]
+        [string]$CloudLBNodeCondition,
+        [Parameter(Mandatory=$false)]
+        [string]$CloudLBNodeType,
+        [Parameter(Mandatory=$false)]
+        [string]$CloudLBNodeWeight,
+        [Parameter(Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+        Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
+        Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
+
+        Get-AuthToken
+
+        if ($ChangeCondition) {
+            [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" condition="'+$CloudLBNodeCondition.ToUpper()+'"/>'
+        }
+
+        elseif ($ChangeType) {
+            [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" type="'+$CloudLBNodeType.ToUpper()+'" />'
+        }
+
+        elseif ($ChangeWeight) {
+            [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" weight="'+$CloudLBNodeWeight+'"/>'
+        }
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Your node has been updated. Updated information will be shown in 10 seconds:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerNodeList $CloudLBID DFW
+}
+
+elseif ($Region -eq "ORD") {
+
+            Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+            Write-Host "Your node has been updated. Updated information will be shown in 10 seconds:"
+
+            Sleep 10
+
+            Get-CloudLoadBalancerNodeList $CloudLBID ORD
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Update-CloudLoadBalancerNode cmdlet will update a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER CloudLBNodeID
+ Use this parameter to define the ID of the node you are about to modify.
+
+ .PARAMETER CloudLBNodeCondition
+ Use this parameter to define the condition of the specified node. At all times, you must have at least one ENABLED node within a load balancer's configuration. Accepted values in this field are:
+
+ "ENABLED"  - Node is permitted to accept new connections
+ "DISABLED" - Node is not permitted to accept any new connections. Existing connections are forcibly terminated.
+ "DRAINING" - Node is allowed to service existing established connections and connections that are being directed to it as a result of the session persistence configuration.
+
+ .Parameter CloudLBNodeType
+ Use this parameter to define the type of the specified node.  At all times, you must have at least one PRIMARY node within a load balancer's configuration. Allowable node types are:
+ 
+ "PRIMARY"   - Nodes defined as PRIMARY are in the normal rotation to receive traffic from the load balancer.
+ "SECONDARY" - Nodes defined as SECONDARY are only in the rotation to receive traffic from the load balancer when all the primary nodes fail.
+
+ .Parameter CloudLBNodeWeight
+ Use this parameter to definte the weight of the node you are adding to the load balancer.  This parameter is only required if you are adding a node to a load balancer that is utilizing a weighted load balancing algorithm.
+
+ .PARAMETER CloudLBTimeout
+ Use this parameter to define the timeout value of the specified load balancer.
+
+ .PARAMETER ChangeName
+ Use this switch to specify that you are changing the name of the load balancer.
+
+ .PARAMETER ChangePort
+ Use this switch to specify that you are changing the port of the load balancer.
+
+ .PARAMETER ChangeProtocol
+ Use this switch to specify that you are changing the protocol of the load balancer.
+
+ .PARAMETER ChangeAlgorithm
+ Use this switch to specify that you are changing the algorithm of the load balancer.
+
+ .PARAMETER ChangeTimeout
+ Use this switch to specify that you are changing the timeout of the load balancer.
+
+.PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
+ This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+#>
+}
+
+function Get-CloudLoadBalancerNodeEvents{
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/events.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/events.xml"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
+    [xml]$NodeEventStep0 = Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary
+    [xml]$NodeEventFinal = ($NodeEventStep0.innerxml)
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        $NodeEventFinal.NodeServiceEvents.NodeServiceEvent | ft $NodeServiceEventTable -AutoSize
+
+}
+
+elseif ($Region -eq "ORD") {  
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available load balancers and storing data into a variable
+    [xml]$NodeEventStep0 = (Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary)
+    [xml]$NodeEventFinal = ($NodeEventStep0.innerxml)
+    
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        $NodeEventFinal.NodeServiceEvents.NodeServiceEvent | ft $NodeServiceEventTable -AutoSize
+ }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancerNodeList cmdlet will pull down a list of all nodes that are currently provisioned behind the specified load balancer.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer of which you want explicit details. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList -CloudLBID 12345 -Region DFW
+ This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList 12345 ORD
+ This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
+#>
+}
+
+function Add-SessionPersistence {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$PersistenceType,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+
+    [xml]$AddSessionPersistenceXMLBody = '<sessionPersistence xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" persistenceType="'+$PersistenceType.ToUpper()+'"/>'
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$AddPersistenceStep0 = Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
+    [xml]$AddPersistencetFinal = ($AddPersistenceStep0.innerxml)
+
+        if (!$AddPersistencetFinal) {
+            Break
+        }
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Session Persistence has now been enabled.  Please wait 10 seconds for an updated attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+
+}
+
+elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$AddPersistenceStep0 = Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
+    [xml]$AddPersistencetFinal = ($AddPersistenceStep0.innerxml)
+
+        if (!$AddPersistencetFinal) {
+            Break
+        }
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Session Persistence has now been enabled.  Please wait 10 seconds for an update attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+
+}
+<#
+ .SYNOPSIS
+ The Add-SessionPersistence cmdlet will enable session persistence on the specified load balancer.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer of which you want to enabled session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ 
+ .PARAMETER PeresistenceType
+ Use this parameter to define the type of persistence you would like to enable on the specified load balancer.  The following modes of persistence are supported:
+
+ HTTP_COOKIE - A session persistence mechanism that inserts an HTTP cookie and is used to determine the destination back-end node. This is supported for HTTP load balancing only.
+ SOURCE_IP   - A session persistence mechanism that will keep track of the source IP address that is mapped and is able to determine the destination back-end node. This is supported for HTTPS pass-through and non-HTTP load balancing only.
+ 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-SessionPersistence -CloudLBID 116351 -PersistenceType source_ip -Region ord
+ This example shows how to add source IP based session persistence to a cloud load balancer in the ORD region.
+#>
+}
