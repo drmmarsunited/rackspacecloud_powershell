@@ -24,7 +24,7 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
 
 <h2>How to Install</h2>
 
-The way this script is built is as a Powershell module. By default, PowerShell looks in the paths specified in the $env:PSModulePath environment variable when searching for available modules on a system. This contains two paths out of the box
+The way this script is built as a Powershell module. Start by downloading as a ZIP file above. By default, PowerShell looks in the paths specified in the $env:PSModulePath environment variable when searching for available modules on a system. This contains two paths out of the box
 
 1.	<b>System Location</b>
     
