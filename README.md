@@ -20,7 +20,7 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
  
 <b>Powershell Execution Policy</b>
 
-* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" as a local/domain admin on your server.
+* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" as a local/domain admin on your server. <b> Please note, if you have UAC enabled, you must run Powershell "as an administrator" to be able to manipulate execution policy.</b>
 
 <h2>How to Install</h2>
 
