@@ -105,6 +105,57 @@ $EndPointTable = @{Expression={$service.name};Label="Name"},
 @{Expression={$service.endpoint.region};Label="Region"},
 @{Expression={$service.endpoint.publicURL};Label="URL"}
 
+<#
+## Define Optional Aliases for easier cmdlet execution
+## To enable, remove the <# from 2 lines above this, and remove its inverse at the end of this block
+Set-Alias -Name gcs -Value Get-CloudServers
+Set-Alias -Name gcsi -Value Get-CloudServerImages
+Set-Alias -Name gcsf -Value Get-CloudServerFlavors
+Set-Alias -Name gcsd -Value Get-CloudServerDetails
+Set-Alias -Name acs -Value Add-CloudServer
+Set-Alias -Name acsi -Value Add-CloudServerImage
+Set-Alias -Name ucs -Value Update-CloudServer
+Set-Alias -Name rcs -Value Resize-CloudServer
+Set-Alias -Name rmcs -Value Remove-CloudServer
+Set-Alias -Name rmcsi -Value Remove-CloudServerImage
+
+Set-Alias -Name gcbsvols -Value Get-CloudBlockStorageVolList
+Set-Alias -Name gcbssnaps -Value Get-CloudBlockStorageSnapList
+Set-Alias -Name gcbstypes -Value Get-CloudBlockStorageTypes
+Set-Alias -Name gcbssnap -Value Get-CloudBlockStorageSnap
+Set-Alias -Name gcbsvol -Value Get-CloudBlockStorageVol
+Set-Alias -Name acbssnap -Value Add-CloudBlockStorageSnap
+Set-Alias -Name acbsvol -Value Add-CloudBlockStorageVol
+Set-Alias -Name rmcbssnap -Value Remove-CloudBlockStorageSnap
+Set-Alias -Name rmcbsvol -Value Remove-CloudBlockStorageVol
+
+
+Set-Alias -Name gcn -Value Get-CloudNetworks
+Set-Alias -Name acn -Value Add-CloudNetwork
+Set-Alias -Name rcn -Value Remove-CloudNetwork
+
+Set-Alias -Name gclb -Value Get-CloudLoadBalancers
+Set-Alias -Name gclbd -Value Get-CloudLoadBalancerDetails
+Set-Alias -Name gclbnl -Value Get-CloudLoadBalancerNodeList
+Set-Alias -Name gclbpro -Value Get-CloudLoadBalancerProtocols
+Set-Alias -Name gclba -Value Get-CloudLoadBalancerAlgorithms
+Set-Alias -Name gclbne -Value Get-CloudLoadBalancerNodeEvents
+Set-Alias -Name aclb -Value Add-CloudLoadBalancer
+Set-Alias -Name aclbn -Value Add-CloudLoadBalancerNode
+Set-Alias -Name aclbsp -Value Add-SessionPersistence
+Set-Alias -Name aclbcl -Value Add-ConnectionLogging
+Set-Alias -Name aclbct -Value Add-ConnectionThrottling
+Set-Alias -Name uclb -Value Update-CloudLoadBalancer
+Set-Alias -Name uclbn -Value Update-CloudLoadBalancerNode
+Set-Alias -Name uclbsp -Value Update-SessionPersistence
+Set-Alias -Name uclbsp -Value Update-ConnectionThrottling
+Set-Alias -Name rclb -Value Remove-CloudLoadBalancer
+Set-Alias -Name rclbn -Value Remove-CloudLoadBalancerNode
+Set-Alias -Name rclbsp -Value Remove-SessionPersistence
+Set-Alias -Name rclbcl -Value Remove-ConnectionLogging
+Set-Alias -Name rclbct -Value Remove-ConnectionThrottling
+#>
+
 ## Define Functions
 
 ## Region mismatch function
@@ -1067,7 +1118,7 @@ elseif ($Region -eq "ORD") {
 #>    
  }
 
-function Optimize-CloudServer {
+function Resize-CloudServer {
 
     Param(
         [Parameter(Mandatory=$False)]
@@ -1167,7 +1218,7 @@ elseif ($Region -eq "ORD") {
 }
 <#
  .SYNOPSIS
- The Optimize-CloudServer cmdlet will resize the specified cloud server to a new flavor.  After the original request, you can also use this command to either REVERT your changes, or CONFIRM them.
+ The Resize-CloudServer cmdlet will resize the specified cloud server to a new flavor.  After the original request, you can also use this command to either REVERT your changes, or CONFIRM them.
 
  .DESCRIPTION
  See synopsis.
@@ -1188,15 +1239,15 @@ elseif ($Region -eq "ORD") {
  Use this switch to indicate that you would like to revert the newly resized server to its previous state.  This will permanently undo the original resize operation.
 
  .EXAMPLE
- PS C:\Users\Administrator> Optimize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW -CloudServerFlavorID 3
+ PS C:\Users\Administrator> Resize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW -CloudServerFlavorID 3
  This example shows how to resize a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region, to a new size of 1GB RAM, 1 vCPU, 40GB storage.
 
  .EXAMPLE
- PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Confirm
+ PS C:\Users\Administrator> Resize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Confirm
  This example shows how to confirm the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Revert
+ PS C:\Users\Administrator> Resize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Revert
  This example shows how to revert the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region, back to its previous size.
 #>
 }
@@ -2403,7 +2454,7 @@ function Get-CloudLoadBalancerDetails {
             IP = $ip.address
 	    }}
 
-    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
+    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
 
     $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
@@ -2438,7 +2489,7 @@ function Get-CloudLoadBalancerDetails {
             IP = $ip.address
 	    }}
 
-    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status)}
+    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
 
     $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
@@ -3399,3 +3450,594 @@ else {
  This example shows how to add source IP based session persistence to a cloud load balancer in the ORD region.
 #>
 }
+
+function Update-SessionPersistence {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$PersistenceType,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+
+    [xml]$AddSessionPersistenceXMLBody = '<sessionPersistence xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" persistenceType="'+$PersistenceType.ToUpper()+'"/>'
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$AddPersistenceStep0 = Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
+    [xml]$AddPersistencetFinal = ($AddPersistenceStep0.innerxml)
+
+        if (!$AddPersistencetFinal) {
+            Break
+        }
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Session Persistence has now been modified.  Please wait 10 seconds for an updated attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+
+}
+
+elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$AddPersistenceStep0 = Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
+    [xml]$AddPersistencetFinal = ($AddPersistenceStep0.innerxml)
+
+        if (!$AddPersistencetFinal) {
+            Break
+        }
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Session Persistence has now been modified.  Please wait 10 seconds for an update attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+
+}
+<#
+ .SYNOPSIS
+ The Update-SessionPersistence cmdlet will modify session persistence on the specified load balancer.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer of which you want to enabled session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ 
+ .PARAMETER PeresistenceType
+ Use this parameter to define the type of persistence you would like to enable on the specified load balancer.  The following modes of persistence are supported:
+
+ HTTP_COOKIE - A session persistence mechanism that inserts an HTTP cookie and is used to determine the destination back-end node. This is supported for HTTP load balancing only.
+ SOURCE_IP   - A session persistence mechanism that will keep track of the source IP address that is mapped and is able to determine the destination back-end node. This is supported for HTTPS pass-through and non-HTTP load balancing only.
+ 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Update-SessionPersistence -CloudLBID 116351 -PersistenceType source_ip -Region ord
+ This example shows how to update the session persistence type to "SOURCE_IP" of a cloud load balancer in the ORD region.
+#>
+}
+
+function Remove-SessionPersistence {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$PersistenceStep0 = Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    [xml]$PersistencetFinal = ($PersistenceStep0.innerxml)
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Session Persistence has now been disabled.  Please wait 10 seconds for an updated attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID $Region
+
+}
+
+elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$PersistenceStep0 = Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    [xml]$PersistencetFinal = ($PersistenceStep0.innerxml)
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Session Persistence has now been disabled.  Please wait 10 seconds for an updated attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID $Region
+
+}
+
+else {
+
+    Send-RegionError
+
+}
+<#
+ .SYNOPSIS
+ The Remove-SessionPersistence cmdlet will disable session persistence on the specified load balancer.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer of which you want to enabled session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ 
+ .PARAMETER PeresistenceType
+ Use this parameter to define the type of persistence you would like to enable on the specified load balancer.  The following modes of persistence are supported:
+
+ HTTP_COOKIE - A session persistence mechanism that inserts an HTTP cookie and is used to determine the destination back-end node. This is supported for HTTP load balancing only.
+ SOURCE_IP   - A session persistence mechanism that will keep track of the source IP address that is mapped and is able to determine the destination back-end node. This is supported for HTTPS pass-through and non-HTTP load balancing only.
+ 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-SessionPersistence -CloudLBID 116351 -Region ord
+ This example shows how to disable based session persistence on a cloud load balancer in the ORD region.
+#>
+}
+
+function Add-ConnectionLogging {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+
+    [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"/>'
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Connection logging has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID DFW
+}
+
+elseif ($Region -eq "ORD") {
+
+            Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+            Write-Host "Connection logging has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+
+            Sleep 10
+
+            Get-CloudLoadBalancerDetails $CloudLBID ORD
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-ConnectionLogging cmdlet will enable connection logging on a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
+ This example shows how to enable connection logging on a CLB in the ORD region.
+#>
+}
+
+function Remove-ConnectionLogging {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+
+    [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"/>'
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID DFW
+}
+
+elseif ($Region -eq "ORD") {
+
+            Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+            Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
+
+            Sleep 10
+
+            Get-CloudLoadBalancerDetails $CloudLBID ORD
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-ConnectionLogging cmdlet will disable connection logging on a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
+ This example shows how to disable connection logging on a CLB in the ORD region.
+#>
+}
+
+function Add-ConnectionThrottling {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [int]$MaxConnectionRate,
+        [Parameter(Position=2,Mandatory=$true)]
+        [int]$MaxConnections,
+        [Parameter(Position=3,Mandatory=$true)]
+        [int]$MinConnections,
+        [Parameter(Position=4,Mandatory=$true)]
+        [int]$RateInterval,
+        [Parameter(Position=5,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+
+    [xml]$AddConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+    minConnections="'+$MinConnections+'"
+    maxConnections="'+$MaxConnections+'"
+    maxConnectionRate="'+$MaxConnectionRate+'"
+    rateInterval="'+$RateInterval+'" />'
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Connection throttling has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID DFW
+}
+
+elseif ($Region -eq "ORD") {
+
+            Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+            Write-Host "Connection throttling has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+
+            Sleep 10
+
+            Get-CloudLoadBalancerDetails $CloudLBID ORD
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-ConnectionThrottling cmdlet will enable connection throttling on a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER MaxConnectionRate
+ Use this parameter to define the maximum number of connections allowed from a single IP address in the defined "RateInterval" parameter. Setting a value of 0 allows an unlimited connection rate; otherwise, set a value between 1 and 100000.
+
+ .PARAMETER MaxConnections
+ Use this parameter to define the maximum number of connections to allow for a single IP address. Setting a value of 0 will allow unlimited simultaneous connections; otherwise set a value between 1 and 100000.
+
+ .PARAMETER MinConnections
+ Use this parameter to define the lowest possible number of connections per IP address before applying throttling restrictions. Setting a value of 0 allows unlimited simultaneous connections; otherwise, set a value between 1 and 1000.
+
+ .PARAMETER RateInterval
+ Use this parameter to define the frequency (in seconds) at which the "maxConnectionRate" parameter is assessed. For example, a "maxConnectionRate" value of 30 with a "rateInterval" of 60 would allow a maximum of 30 connections per minute for a single IP address. This value must be between 1 and 3600.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
+ This example shows how to enable connection logging on a CLB in the ORD region.
+#>
+}
+
+function Update-ConnectionThrottling {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$false)]
+        [switch]$ChangeMaxConnectionRate,
+        [Parameter(Position=2,Mandatory=$false)]
+        [switch]$ChangeMaxConnections,
+        [Parameter(Position=3,Mandatory=$false)]
+        [switch]$ChangeMinConnections,
+        [Parameter(Position=4,Mandatory=$false)]
+        [switch]$ChangeRateInterval,
+        [Parameter(Position=5,Mandatory=$false)]
+        [int]$MaxConnectionRate,
+        [Parameter(Position=6,Mandatory=$false)]
+        [int]$MaxConnections,
+        [Parameter(Position=7,Mandatory=$false)]
+        [int]$MinConnections,
+        [Parameter(Position=8,Mandatory=$false)]
+        [int]$RateInterval,
+        [Parameter(Position=9,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+
+        if ($ChangeMaxConnectionRate) {
+    
+            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" maxConnectionRate="'+$MaxConnectionRate+'"/>'
+
+        }
+
+        elseif ($ChangeMaxConnections) {
+
+            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" maxConnections="'+$MaxConnections+'"/>'
+
+        }
+
+        elseif ($ChangeMinConnections) {
+
+            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" minConnections="'+$MinConnections+'"/>'
+
+        }
+
+        elseif ($ChangeRateInterval) {
+            
+            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" rateInterval="'+$RateInterval+'"/>'
+
+        }
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($Region -eq "DFW") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$ThrottleStep0 = Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $ChangeConnectionThrottleXMLBody -Method Put -ErrorAction Stop
+    [xml]$ThrottleFinal = ($ThrottleStep0.innerxml)
+
+        if (!$ThrottleFinal) {
+            Break
+        }
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Connection Throttling values have now been modified.  Please wait 10 seconds for an updated attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+
+}
+
+elseif ($Region -eq "ORD") {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API
+    [xml]$ThrottleStep0 = Invoke-RestMethod -Uri $ORDLBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $ChangeConnectionThrottleXMLBody -Method Put -ErrorAction Stop
+    [xml]$ThrottleFinal = ($ThrottleStep0.innerxml)
+
+        if (!$ThrottleFinal) {
+            Break
+        }
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+     
+        Write-Host "Connection Throttling values have now been modified.  Please wait 10 seconds for an updated attribute listing."
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+
+}
+<#
+ .SYNOPSIS
+ The Update-ConnectionThrottling cmdlet will modify connection throttling values on the specified load balancer.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER CloudLBID
+ Use this parameter to indicate the ID of the cloud load balancer. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ 
+ .PARAMETER $ChangeMaxConnectionRate
+ Use this switch to indicate you wish to change the MaxConnectionRate value.
+
+ .PARAMETER $ChangeMaxConnections
+ Use this switch to indicate you wish to change the MaxConnections value.
+
+ .PARAMETER $ChangeMinConnections
+ Use this switch to indicate you wish to change the MinConnections value.
+
+ .PARAMETER $ChangeRateInterval
+ Use this switch to indicate you wish to change the RateInterval value.
+
+ .PARAMETER MaxConnectionRate
+ Use this parameter to define the maximum number of connections allowed from a single IP address in the defined "RateInterval" parameter. Setting a value of 0 allows an unlimited connection rate; otherwise, set a value between 1 and 100000.
+
+ .PARAMETER MaxConnections
+ Use this parameter to define the maximum number of connections to allow for a single IP address. Setting a value of 0 will allow unlimited simultaneous connections; otherwise set a value between 1 and 100000.
+
+ .PARAMETER MinConnections
+ Use this parameter to define the lowest possible number of connections per IP address before applying throttling restrictions. Setting a value of 0 allows unlimited simultaneous connections; otherwise, set a value between 1 and 1000.
+
+ .PARAMETER RateInterval
+ Use this parameter to define the frequency (in seconds) at which the "maxConnectionRate" parameter is assessed. For example, a "maxConnectionRate" value of 30 with a "rateInterval" of 60 would allow a maximum of 30 connections per minute for a single IP address. This value must be between 1 and 3600.
+ 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Update-ConnectionThrottling -CloudLBID 116351 -ChangeMaxConnections -MaxConnections 150 -Region ord
+ This example shows how to update the MaxConnections value of a CLB in the ORD region
+#>
+}
+
+function Remove-ConnectionThrottling {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
+
+        Write-Host "Connection throttling has now been disabled. Please wait 10 seconds to see an updated detail listing:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID DFW
+}
+
+elseif ($Region -eq "ORD") {
+
+            Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
+
+            Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
+
+            Sleep 10
+
+            Get-CloudLoadBalancerDetails $CloudLBID ORD
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-ConnectionThrottling cmdlet will disable connection logging on a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-ConnectionThrottling -CloudLBID 116351 -Region ord
+ This example shows how to disable connection throttling on a CLB in the ORD region.
+#>
+}
+
