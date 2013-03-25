@@ -89,6 +89,10 @@ $VolSnapTable = @{Expression={$_.id};Label="Snap ID";width=35},
 $VolTypeTable = @{Expression={$_.id};Label="ID";width=5}, 
 @{Expression={$_.name};Label="Name";width=6}
 
+$ServerAttachmentsTable = @{Expression={$_.id};Label="Attachment ID";width=35},
+@{Expression={$_.volumeid};Label="Attached Volume ID";width=35},
+@{Expression={$_.device};Label="Attached Device Type";width=15}
+
 $NewServerTable = @{Expression={$_.id};Label="Server ID";width=38}, 
 @{Expression={$_.adminpass};Label="Server Password";width=40}
 
@@ -510,6 +514,70 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerDetails ORD
  This example shows how to get flavor data from the ORD region, without specifying the parameter name itself.
+#>
+}
+
+function Get-CloudServerAttachments {
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $CloudServerID,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWServerURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Set-Variable -Name ORDServerURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+
+ if ($Region -eq "DFW") {
+        
+        [xml]$CloudServerAttachmentsStep0 = Invoke-RestMethod -Uri $DFWServerURI -Headers $HeaderDictionary -Method Get
+        [xml]$CloudServerAttachmentsFinal = $CloudServerAttachmentsStep0.InnerXml
+
+            if (!$CloudServerAttachmentsFinal.volumeAttachments) {
+                Write-Host "This cloud server has no cloud block storage volumes attached." -ForegroundColor Red
+            }
+
+            else {
+                $CloudServerAttachmentsFinal.volumeAttachments.volumeAttachment | ft $ServerAttachmentsTable -AutoSize
+            }
+    }
+
+elseif ($Region -eq "ORD") {
+        
+        [xml]$CloudServerAttachmentsStep0 = Invoke-RestMethod -Uri $ORDServerURI -Headers $HeaderDictionary -Method Get
+        [xml]$CloudServerAttachmentsFinal = $CloudServerAttachmentsStep0.InnerXml
+
+            if (!$CloudServerAttachmentsFinal.volumeAttachments) {
+                    Write-Host "This cloud server has no cloud block storage volumes attached." -ForegroundColor Red
+                }
+
+            elseif ($CloudServerAttachmentsFinal) {
+                $CloudServerAttachmentsFinal.volumeAttachments.volumeAttachment | ft $ServerAttachmentsTable -AutoSize
+                }
+    }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudServerAttachments cmdlet will retrieve a list of all cloud block storage volume attachments to a cloud server.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server to which you wish to view storage attachments. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerAttachments -CloudServerID e6ce2ee7-5d9a-4ef4-a78c-fe12f873f46c -Region ord
+ This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the ORD region.
 #>
 }
 
@@ -2124,6 +2192,131 @@ function Remove-CloudBlockStorageSnap {
 #>
 }
 
+function Connect-CloudBlockStorageVol {
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $CloudServerID,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $CloudBlockStorageVolID,
+        [Parameter (Position=2, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWServerURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Set-Variable -Name ORDServerURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+
+    [xml]$AttachStorage = '<?xml version="1.0" encoding="UTF-8"?>
+<volumeAttachment
+    xmlns="http://docs.openstack.org/compute/api/v1.1"
+    volumeId="'+$CloudBlockStorageVolID+'"
+    device="/dev/xvdb"/>'
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWServerURI -Headers $HeaderDictionary -Body $AttachStorage -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
+
+        Write-Host "The cloud block storage volume has been attached.  Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudBlockStorageVol -CloudBlockStorageVolID $CloudBlockStorageVolID -Region $Region
+                                   }
+
+elseif ($Region -eq "ORD") {
+        
+        Invoke-RestMethod -Uri $ORDServerURI -Headers $HeaderDictionary -Body $AttachStorage -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
+
+        Write-Host "The cloud block storage volume has been attached.  Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudBlockStorageVol -CloudBlockStorageVolID $CloudBlockStorageVolID -Region $Region
+                                   }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Connect-CloudBlockStorageVol cmdlet will attach a cloud block storage volume to a cloud server.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server to which you wish to attach storage. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> 
+
+#>
+}
+
+function Disconnect-CloudBlockStorageVol {
+
+        Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $CloudServerID,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $CloudServerAttachmentID,
+        [Parameter (Position=2, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWServerURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments/$CloudServerAttachmentID.xml"
+    Set-Variable -Name ORDServerURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments/$CloudServerAttachmentID.xml"
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWServerURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+        Write-Host "The cloud block storage volume has been detached.  Please wait 15 seconds for confirmation:"
+
+        Sleep 15
+
+        Get-CloudServerAttachments -CloudServerID $CloudServerID -Region $Region
+                                   }
+
+elseif ($Region -eq "ORD") {
+        
+        Invoke-RestMethod -Uri $ORDServerURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+        Write-Host "The cloud block storage volume has been detached.  Please wait 15 seconds for confirmation:"
+
+        Sleep 15
+
+        Get-CloudServerAttachments -CloudServerID $CloudServerID -Region $Region
+                                   }
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Disconnect-CloudBlockStorageVol cmdlet will detach a cloud block storage volume from a cloud server.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudServerID
+ Use this parameter to indicate the 32 character UUID of the cloud server to which you wish to attach storage. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> 
+
+#>
+}
 
 
 ## Cloud Network API Cmdlets
@@ -4040,4 +4233,3 @@ else {
  This example shows how to disable connection throttling on a CLB in the ORD region.
 #>
 }
-
