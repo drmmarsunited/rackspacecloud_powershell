@@ -14,8 +14,10 @@ This is a “work in progress” Powershell API client for Rackspace’s public 
     
 * API Key
 
-<b>Windows Management Framework 3.0</b>
+<b>.NET & Windows Management Framework 3.0, Respectively</b>
     
+* [Download .NET Here] (http://www.microsoft.com/en-us/download/details.aspx?id=17851)
+
 * [Download WMF 3.0 Here] (http://www.microsoft.com/en-us/download/details.aspx?id=34595)
  
 <b>Powershell Execution Policy</b>
