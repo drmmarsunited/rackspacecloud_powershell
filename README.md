@@ -1,4 +1,4 @@
-<h1>Rackspace Cloud API Powershell Client</h1>
+<h1>PowerClient - Rackspace Cloud API Powershell Client</h1>
 
 <h2>Introduction</h2>
 
