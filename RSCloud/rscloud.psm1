@@ -1,7 +1,7 @@
 ﻿## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
-## Description: PSv3 module for NextGen Rackspace Cloud API interaction ##
-## Version 1.7 ##
+## Description: PSv3 module for NextGen Rackspace Cloud API interaction (PowerClient) ##
+## Version 1.9 ##
 ## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -104,6 +104,20 @@ $ServerBandwidthTable = @{Expression={$_.interface};Label="Interface";width=38},
 @{Expression={$_.bandwidth_inbound};Label="Inbound Bandwidth";width=40},
 @{Expression={$_.audit_period_start};Label="Start Date";width=40},
 @{Expression={$_.audit_period_end};Label="End Date";width=40}
+
+$HealthMonitorConnectTable = @{Expression={$_.delay};label="Monitor Delay"},
+@{Expression={$_.timeout};label="Monitor Timeout"},
+@{Expression={$_.attemptsbeforedeactivation};label="Monitor Failure Attempts"},
+@{Expression={$_.type};label="Monitor Type"}
+
+$HealthMonitorHTTPTable = @{Expression={$_.delay};label="Monitor Delay"},
+@{Expression={$_.timeout};label="Monitor Timeout"},
+@{Expression={$_.attemptsbeforedeactivation};label="Monitor Failure Attempts"},
+@{Expression={$_.type};label="Monitor Type"},
+@{Expression={$_.path};label="Monitor HTTP(S) Path"},
+@{Expression={$_.statusregex};label="Monitor Status RegEx"},
+@{Expression={$_.bodyregex};label="Monitor Body RegEx"},
+@{Expression={$_.hostheader};label="Monitor Host Header"}
 
 $EndPointTable = @{Expression={$service.name};Label="Name"},
 @{Expression={$service.endpoint.region};Label="Region"},
@@ -4231,5 +4245,295 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-ConnectionThrottling -CloudLBID 116351 -Region ord
  This example shows how to disable connection throttling on a CLB in the ORD region.
+#>
+}
+
+function Get-HealthMonitor {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+
+ if ($Region -eq "DFW") {
+        
+        [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+
+            if (!$HealthMonitorStep0.healthMonitor.delay) {
+
+                    Write-Host "This load balancer does not currently have any health monitors configured." -ForegroundColor Red
+
+                }
+
+                elseif ($HealthMonitorStep0.healthMonitor.type -eq "CONNECT") {
+
+                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorConnectTable -AutoSize
+
+                }
+
+                elseif ($HealthMonitorStep0.healthMonitor.type -eq "HTTP") {
+
+                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+
+                }
+
+                elseif ($HealthMonitorStep0.healthMonitor.type -eq "HTTPS") {
+
+                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+
+                }
+
+}
+
+elseif ($Region -eq "ORD") {
+
+            [xml]$HealthMonitorStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+
+                if (!$HealthMonitorStep0.healthMonitor.delay) {
+
+                    Write-Host "This load balancer does not currently have any health monitors configured." -ForegroundColor Red
+
+                }
+
+                elseif ($HealthMonitorStep0.healthMonitor.type -eq "CONNECT") {
+
+                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorConnectTable -AutoSize
+
+                }
+
+                elseif ($HealthMonitorStep0.healthMonitor.type -eq "HTTP") {
+
+                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+
+                }
+
+                elseif ($HealthMonitorStep0.healthMonitor.type -eq "HTTPS") {
+
+                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+
+                }
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-HealthMonitor cmdlet will return the status of health monitoring on a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-HealthMonitor -CloudLBID 9956 -Region ord
+ This example shows how to get the status and configuration of a cloud load balancer in the ORD region.
+#>
+}
+
+function Add-HealthMonitor {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$false)]
+        [switch]$WatchConnections,
+        [Parameter(Position=2,Mandatory=$false)]
+        [switch]$WatchHTTP,
+        [Parameter(Position=2,Mandatory=$false)]
+        [switch]$WatchHTTPS,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$MonitorDelay,
+        [Parameter(Position=4,Mandatory=$true)]
+        [string]$MonitorTimeout,
+        [Parameter(Position=5,Mandatory=$true)]
+        [string]$MonitorFailureAttempts,
+        [Parameter(Position=6,Mandatory=$false)]
+        [string]$MonitorBodyRegex,
+        [Parameter(Position=7,Mandatory=$false)]
+        [string]$MonitorStatusRegex,
+        [Parameter(Position=8,Mandatory=$false)]
+        [string]$MonitorHTTPPath,
+        [Parameter(Position=9,Mandatory=$false)]
+        [string]$MonitorHostHeader,
+        [Parameter(Position=10,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+
+        if ($WatchConnections) {
+
+            [xml]$HealthMonitorXMLBody = '<healthMonitor xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+    type="CONNECT"
+    delay="'+$MonitorDelay+'"
+    timeout="'+$MonitorTimeout+'"
+    attemptsBeforeDeactivation="'+$MonitorFailureAttempts+'" />'
+
+        }
+
+        elseif ($WatchHTTP) {
+
+             [xml]$HealthMonitorXMLBody = '<healthMonitor xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+    type="HTTP"
+    delay="'+$MonitorDelay+'"
+    timeout="'+$MonitorTimeout+'"
+    attemptsBeforeDeactivation="'+$MonitorFailureAttempts+'"
+    path="'+$MonitorHTTPPath+'"
+    statusRegex="'+$MonitorStatusRegex+'"
+    bodyRegex="'+$MonitorBodyRegex+'"
+    hostHeader="'+$MonitorHostHeader+'"/>'
+
+        }
+
+        elseif ($WatchHTTPS) {
+
+             [xml]$HealthMonitorXMLBody = '<healthMonitor xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
+    type="HTTPS"
+    delay="'+$MonitorDelay+'"
+    timeout="'+$MonitorTimeout+'"
+    attemptsBeforeDeactivation="'+$MonitorFailureAttempts+'"
+    path="'+$MonitorHTTPPath+'"
+    statusRegex="'+$MonitorStatusRegex+'"
+    bodyRegex="'+$MonitorBodyRegex+'"
+    hostHeader="'+$MonitorHostHeader+'"/>'
+
+        }
+
+ if ($Region -eq "DFW") {
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Health Monitoring has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerDetails $CloudLBID $Region
+}
+
+elseif ($Region -eq "ORD") {
+
+            Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+            Write-Host "Health Monitoring has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+
+            Sleep 10
+
+            Get-CloudLoadBalancerDetails $CloudLBID $Region
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-HealthMonitor cmdlet will enable health monitoring on a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER WatchConnections
+ Use this switch to indicate that you'd like to setup a basic connection health monitor. The monitor connects to each node on its defined port to ensure that the service is listening properly. The connect monitor is the most basic type of health check and does no post-processing or protocol specific health checks.
+
+ .PARAMETER WatchHTTP
+ Use this switch to indicate that you'd like to setup an HTTP health monitor. The HTTP and HTTPS monitor is more intelligent than the connect monitor. It is capable of processing an HTTP or HTTPS response to determine the condition of a node. It supports the same basic properties as the connect monitor and includes additional attributes that are used to evaluate the HTTP response.
+
+ .PARAMETER WatchHTTPS
+ Use this switch to indicate that you'd like to setup an HTTPS health monitor. The HTTP and HTTPS monitor is more intelligent than the connect monitor. It is capable of processing an HTTP or HTTPS response to determine the condition of a node. It supports the same basic properties as the connect monitor and includes additional attributes that are used to evaluate the HTTP response.
+
+ .PARAMETER MonitorDelay
+ Use this parameter to define the minimum number of seconds to wait before executing the health monitor. Must be a number between 1 and 3600. This parameter is needed for any type of health check.
+
+ .PARAMETER MonitorTimeout
+ Use this parameter to define the maximum number of seconds to wait for a connection to be established before timing out. Must be a number between 1 and 300. This parameter is needed for any type of health check.
+
+ .PARAMETER MonitorFailureAttempts
+ Use this parameter to define the number of permissible monitor failures before removing a node from rotation. Must be a number between 1 and 10. This parameter is needed for any type of health check.
+
+ .PARAMETER MonitorBodyRegex
+ Use this parameter to define a regular expression that will be used to evaluate the contents of the body of the HTTP/HTTPS response.
+
+ .PARAMETER MonitorStatusRegEx
+ Use this parameter to define a regular expression that will be used to evaluate the HTTP status code returned in the HTTP/HTTPS response.
+
+ .PARAMETER MointorHTTPPath
+ Use this parameter to define the HTTP path that will be used in the sample request.
+
+ .PARAMETER MonitorHostHeader        
+ Use this parameter to define the name of a host for which the health monitors will check. This parameter is only needed for an HTTP/HTTPS type monitor.
+
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+#>
+}
+
+function Remove-HealthMonitor {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+        ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+
+ if ($Region -eq "DFW") {
+        
+        [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+         Write-Host "Health monitoring has been removed from this load balancer."
+}
+
+elseif ($Region -eq "ORD") {
+
+            [xml]$HealthMonitorStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+            Write-Host "Health monitoring has been removed from this load balancer."
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-HealthMonitor cmdlet will remove a health monitor from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-HealthMonitor -CloudLBID 9956 -Region ord
+ This example shows how to remove health mointoring from a cloud load balancer in the ORD region.
 #>
 }
