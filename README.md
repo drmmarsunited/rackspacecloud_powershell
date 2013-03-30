@@ -36,13 +36,13 @@ The way this script is built as a Powershell module. Start by downloading as a Z
     
     a.	%UserProfile%\Documents\WindowsPowerShell\Modules
 
-For the sake of ease, place the “RSCloud” folder in the 2nd listed folder above.  Once you’ve placed the folder in its new location, edit the “RSCloud.psm1” with Notepad (or you’re preferred text editor). In this file, the following lines need to be edited with you Rackspace cloud account information:
+For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above.  Once you’ve placed the folder in its new location, edit the “RSCloud.psm1” with Notepad (or you’re preferred text editor). In this file, the following lines need to be edited with you Rackspace cloud account information:
 
 1.	Set-Variable -Name CloudUsername -Value "Your Username Here" -Scope Global
 2.	Set-Variable -Name CloudAPIKey -Value "Your API key here" -Scope Global
 3.	Set-Variable -Name CloudDDI -Value "Your account number/DDI here" -Scope Global 
 
-After editing the file, please save it!  You can then launch Powershell, and run "Import-Module RSCloud". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
+After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
 
 <h2>Additional Information</h2>
 
