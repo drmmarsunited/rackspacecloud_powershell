@@ -11,6 +11,9 @@ Set-Variable -Name CloudAPIKey -Value "" -Scope Global
 Set-Variable -Name CloudDDI -Value "" -Scope Global
 ## THIS VARIABLE WILL NOT BE USED IN V1 - Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
 
+## Allow unlimited enumeration
+$FormatEnumerationLimit = -1
+
 ## Define Custom tables for Result Sets
 $ImageListTable = @{Expression={$_.id};Label="Image ID";width=38}, 
 @{Expression={$_.Name};Label="Image Name";width=40}, 
@@ -122,6 +125,13 @@ $HealthMonitorHTTPTable = @{Expression={$_.delay};label="Monitor Delay"},
 $EndPointTable = @{Expression={$service.name};Label="Name"},
 @{Expression={$service.endpoint.region};Label="Region"},
 @{Expression={$service.endpoint.publicURL};Label="URL"}
+
+$SSLTable = @{Expression={$_.enabled};Label="SSL Enabled";width=12},
+@{Expression={$_.securePort};Label="SSL Port";width=10},
+@{Expression={$_.secureTrafficOnly};Label="SSL Only";width=10},
+@{Expression={$_.privateKey};Label="Private Key";width=40},
+@{Expression={$_.certificate};Label="Certificate(s)";width=40},
+@{Expression={$_.intermediateCertificate};Label="Intermediate Certificate(s)";width=50}
 
 <#
 ## Define Optional Aliases for easier cmdlet execution
@@ -4213,6 +4223,9 @@ function Remove-ConnectionThrottling {
     Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
 
  if ($Region -eq "DFW") {
+
+        ## Retrieving authentication token
+        Get-AuthToken
         
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
 
@@ -4225,6 +4238,9 @@ function Remove-ConnectionThrottling {
 
 elseif ($Region -eq "ORD") {
 
+            ## Retrieving authentication token
+            Get-AuthToken
+            
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
 
             Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
@@ -4272,6 +4288,9 @@ function Get-HealthMonitor {
 
  if ($Region -eq "DFW") {
         
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
 
             if (!$HealthMonitorStep0.healthMonitor.delay) {
@@ -4302,6 +4321,9 @@ function Get-HealthMonitor {
 
 elseif ($Region -eq "ORD") {
 
+            ## Retrieving authentication token
+    Get-AuthToken
+            
             [xml]$HealthMonitorStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
 
                 if (!$HealthMonitorStep0.healthMonitor.delay) {
@@ -4426,6 +4448,9 @@ function Add-HealthMonitor {
 
  if ($Region -eq "DFW") {
         
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
         Write-Host "Health Monitoring has now been enabled. Please wait 10 seconds to see an updated detail listing:"
@@ -4437,6 +4462,9 @@ function Add-HealthMonitor {
 
 elseif ($Region -eq "ORD") {
 
+            ## Retrieving authentication token
+    Get-AuthToken
+            
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
             Write-Host "Health Monitoring has now been enabled. Please wait 10 seconds to see an updated detail listing:"
@@ -4511,6 +4539,9 @@ function Remove-HealthMonitor {
 
  if ($Region -eq "DFW") {
         
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
          Write-Host "Health monitoring has been removed from this load balancer."
@@ -4518,6 +4549,9 @@ function Remove-HealthMonitor {
 
 elseif ($Region -eq "ORD") {
 
+            ## Retrieving authentication token
+    Get-AuthToken
+            
             [xml]$HealthMonitorStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
             Write-Host "Health monitoring has been removed from this load balancer."
@@ -4565,6 +4599,9 @@ function Add-ContentCaching {
 
  if ($Region -eq "DFW") {
         
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
          Write-Host "Content caching has been enabled on this load balancer."
@@ -4572,6 +4609,9 @@ function Add-ContentCaching {
 
 elseif ($Region -eq "ORD") {
 
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         [xml]$ContentCachingStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
         Write-Host "Content caching has been enabled on this load balancer."
@@ -4619,6 +4659,9 @@ function Remove-ContentCaching {
 
  if ($Region -eq "DFW") {
         
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
          Write-Host "Content caching has been removed from this load balancer."
@@ -4626,6 +4669,9 @@ function Remove-ContentCaching {
 
 elseif ($Region -eq "ORD") {
 
+        ## Retrieving authentication token
+    Get-AuthToken
+        
         [xml]$ContentCachingStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
         Write-Host "Content caching has been removed from this load balancer."
@@ -4652,5 +4698,65 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-ContentCaching -CloudLBID 9956 -Region ord
  This example shows how to remove content caching from a cloud load balancer in the ORD region.
+#>
+}
+
+function Get-SSLTermination {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+    Get-AuthToken
+        
+        [xml]$SSLTerminationStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+        [xml]$SSLTerminationFinal = $SSLTerminationStep0.InnerXml
+
+        $SSLTerminationFinal.sslTermination | ft $SSLTable -Wrap
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+    Get-AuthToken
+        
+        [xml]$SSLTerminationStep0 = Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+        [xml]$SSLTerminationFinal = $SSLTerminationStep0.InnerXml
+
+        $SSLTerminationFinal.sslTermination | ft $SSLTable -Wrap
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-SSLTermination cmdlet will retrieve the SSL termination settings from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-SSLTermination -CloudLBID 555 -Region ord
+ This example shows how to retrieve the SSL termination settings from a cloud load balancer in the ORD region.
 #>
 }
