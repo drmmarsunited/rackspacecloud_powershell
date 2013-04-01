@@ -42,7 +42,7 @@ For the sake of ease, place the “PowerClient” folder in the 2nd listed folde
 2.	Set-Variable -Name CloudAPIKey -Value "Your API key here" -Scope Global
 3.	Set-Variable -Name CloudDDI -Value "Your account number/DDI here" -Scope Global 
 
-After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
+After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure. <b>It would also help you to extend your Powershell window and screen buffer size to the maximum your screen can support for easiest reading.</b>
 
 <h2>Additional Information</h2>
 
