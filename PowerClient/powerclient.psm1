@@ -2631,6 +2631,9 @@ function Get-CloudLoadBalancerDetails {
         ## Setting variables needed to execute this function
         Set-Variable -Name DFWLBDetailURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
         Set-Variable -Name ORDLBDetailURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+        Set-Variable -Name DFWLBCachingURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+        Set-Variable -Name ORDLBCachingURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+
 
     if ($Region -eq "DFW") {
 
@@ -2639,6 +2642,9 @@ function Get-CloudLoadBalancerDetails {
     [xml]$LBDetailStep0 = (Invoke-RestMethod -Uri $DFWLBDetailURI  -Headers $HeaderDictionary -Method Get)
     [xml]$LBDetailFinal = ($LBDetailStep0.innerxml)
 
+    [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBCachingURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+    [xml]$ContentCachingFinal = ($ContentCachingStep0.innerxml)
+
     ## Handling empty response bodies indicating that no servers exist in the queried data center
     if ($LBDetailFinal.loadBalancer -eq $null) {
 
@@ -2646,24 +2652,24 @@ function Get-CloudLoadBalancerDetails {
 
     }
 
-        $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
-        $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
+            $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
+            $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
         
-        $lbipfinal = ForEach ($ip in $lbip0)
-	    {
+            $lbipfinal = ForEach ($ip in $lbip0)
+	                    {
         New-Object psobject -Property @{
             IP = $ip.address
 	    }}
 
-        $nodeipfinal = ForEach ($ip in $nodeip0)
-	    {
+            $nodeipfinal = ForEach ($ip in $nodeip0)
+	                    {
         New-Object psobject -Property @{
             IP = $ip.address
 	    }}
 
-    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
+        $LBDetailOut = @{"CLB Content Caching"=($ContentCachingFinal.contentCaching.enabled);"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
 
-    $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+        $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
     }
 
@@ -2674,6 +2680,9 @@ function Get-CloudLoadBalancerDetails {
     [xml]$LBDetailStep0 = (Invoke-RestMethod -Uri $ORDLBDetailURI  -Headers $HeaderDictionary -Method Get)
     [xml]$LBDetailFinal = ($LBDetailStep0.innerxml)
 
+    [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $ORDLBCachingURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+    [xml]$ContentCachingFinal = ($ContentCachingStep0.innerxml)
+
     ## Handling empty response bodies indicating that no servers exist in the queried data center
     if ($LBDetailFinal.loadBalancer -eq $null) {
 
@@ -2681,24 +2690,24 @@ function Get-CloudLoadBalancerDetails {
 
     }
     
-    $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
-        $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
+            $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
+            $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
         
-        $lbipfinal = ForEach ($ip in $lbip0)
-	    {
+            $lbipfinal = ForEach ($ip in $lbip0)
+	                    {
         New-Object psobject -Property @{
             IP = $ip.address
 	    }}
 
-        $nodeipfinal = ForEach ($ip in $nodeip0)
-	    {
+            $nodeipfinal = ForEach ($ip in $nodeip0)
+	                    {
         New-Object psobject -Property @{
             IP = $ip.address
 	    }}
 
-    $LBDetailOut = @{"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
+        $LBDetailOut = @{"CLB Content Caching"=($ContentCachingFinal.contentCaching.enabled);"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
 
-    $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
+        $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
     }
 
@@ -4535,5 +4544,113 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-HealthMonitor -CloudLBID 9956 -Region ord
  This example shows how to remove health mointoring from a cloud load balancer in the ORD region.
+#>
+}
+
+function Add-ContentCaching {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+
+    ## Set XML body variable
+    [xml]$ContentCachingXMLBody = '<contentCaching xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"/>'
+
+ if ($Region -eq "DFW") {
+        
+        [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+         Write-Host "Content caching has been enabled on this load balancer."
+}
+
+elseif ($Region -eq "ORD") {
+
+        [xml]$ContentCachingStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Content caching has been enabled on this load balancer."
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-ContentCaching cmdlet will enable content caching for a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-ContentCaching -CloudLBID 9956 -Region ord
+ This example shows how to enable content caching for a cloud load balancer in the ORD region.
+#>
+}
+
+function Remove-ContentCaching {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+
+    ## Set XML body variable
+    [xml]$ContentCachingXMLBody = '<contentCaching xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"/>'
+
+ if ($Region -eq "DFW") {
+        
+        [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+         Write-Host "Content caching has been removed from this load balancer."
+}
+
+elseif ($Region -eq "ORD") {
+
+        [xml]$ContentCachingStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+
+        Write-Host "Content caching has been removed from this load balancer."
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-ContentCaching cmdlet will remove content caching from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-ContentCaching -CloudLBID 9956 -Region ord
+ This example shows how to remove content caching from a cloud load balancer in the ORD region.
 #>
 }
