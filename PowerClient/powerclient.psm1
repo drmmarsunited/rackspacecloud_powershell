@@ -1,7 +1,7 @@
 ﻿## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
-## Description: PSv3 module for NextGen Rackspace Cloud API interaction (PowerClient) ##
-## Version 1.9 ##
+## Description: PSv3 module for NextGen Rackspace Cloud API interaction (PowerClient)##
+## Version 1.9.1 ##
 ## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -9,7 +9,7 @@
 Set-Variable -Name CloudUsername -Value "" -Scope Global
 Set-Variable -Name CloudAPIKey -Value "" -Scope Global
 Set-Variable -Name CloudDDI -Value "" -Scope Global
-## THIS VARIABLE WILL NOT BE USED IN V1 - Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
+## THIS VARIABLE WILL NOT BE USED IN V2 - Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
 
 ## Allow unlimited enumeration
 $FormatEnumerationLimit = -1
@@ -125,6 +125,10 @@ $HealthMonitorHTTPTable = @{Expression={$_.delay};label="Monitor Delay"},
 $EndPointTable = @{Expression={$service.name};Label="Name"},
 @{Expression={$service.endpoint.region};Label="Region"},
 @{Expression={$service.endpoint.publicURL};Label="URL"}
+
+$ACLTable = @{Expression={$_.id};Label="ID"},
+@{Expression={$_.address};Label="IP Address/Range"},
+@{Expression={$_.type};Label="Action"}
 
 $SSLTable = @{Expression={$_.enabled};Label="SSL Enabled";width=12},
 @{Expression={$_.securePort};Label="SSL Port";width=10},
@@ -3583,6 +3587,310 @@ else {
 #>
 }
 
+function Get-CloudLoadBalancerACLs {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        [xml]$AccessListStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+        [xml]$AccessListFinal = $AccessListStep0.InnerXml
+
+            if (!$AccessListFinal.accessList.networkItem) {
+
+                Write-Host "This load balancer does not currently have any ACLs configured." -ForegroundColor Red
+
+            }
+
+            else {
+            
+                $AccessListFinal.accessList.networkItem | ft $ACLTable -AutoSize
+
+            }
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        [xml]$AccessListStep0 = Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+        [xml]$AccessListFinal = $AccessListStep0.InnerXml
+
+        if (!$AccessListFinal.accessList.networkItem) {
+
+                Write-Host "This load balancer does not currently have any ACLs configured." -ForegroundColor Red
+
+            }
+
+            else {
+            
+                $AccessListFinal.accessList.networkItem | ft $ACLTable -AutoSize
+
+            }
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudLoadBalancerACLs cmdlet will retrieve all configured ACL items from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are querying.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudLoadBalancerACLs -CloudLBID 51885 -Region DFW
+ This example shows how to get all ACL items from the specified load balancer in the DFW region.
+#>
+}
+
+function Add-CloudLoadBalancerACLItem {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$IP,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$Action,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+
+    [xml]$ACLXMLBody = '<accessList xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"><networkItem address="'+$IP+'" type="'+$Action.ToUpper()+'" /></accessList>'
+
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ACLXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+
+        Write-Host "The ACL item has been added.  Please wait 10 seonds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerACLs -CloudLBID $CloudLBID -Region $Region
+        
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ACLXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+
+        Write-Host "The ACL item has been added.  Please wait 10 seonds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerACLs -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-CloudLoadBalancerACL cmdlet will add/append an ACL item for a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are modifying.
+
+ .PARAMETER IP
+ Use this parameter to define the IP address for item to add to access list.  This can a single IP, such as "5.5.5.5" or a CIDR notated range, such as "172.50.0.0/16".
+
+ .PARAMETER Action
+ Use this parameter to define the action type of the item you're adding:
+
+    ALLOW – Specifies items that will always take precedence over items with the DENY type.
+
+    DENY – Specifies items to which traffic can be denied.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudLoadBalancerACL -CloudLBID 116351 -IP 5.5.5.5/32 -Action deny -Region ord
+ This example shows how to add an ACL item for the specified load balancer in the ORD region.  This example shows how to explicitly block a single IP from being served by your load balancer, the IP being 5.5.5.5.
+#>
+}
+
+function Remove-CloudLoadBalancerACLItem {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$ACLItemID,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist/$ACLItemID.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist/$ACLItemID.xml"
+
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+        Write-Host "The ACL item has been deleted. Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerACLs -CloudLBID $CloudLBID -Region $Region
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+        Write-Host "The ACL item has been deleted. Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerACLs -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-CloudLoadBalancerACLItem cmdlet will remove a specific  ACL item from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are modifying.
+
+  .PARAMETER ACLItemID
+ Use this parameter to define the ID of the ACL item that you would like to remove. If you are unsure of this ID, please run the "Get-CloudLoadBalancerACLs" cmdlet.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudLoadBalancerACLItem -CloudLBID 116351 -ACLItemID 1234 -Region ORD
+ This example shows how to remove an ACL item from the specified load balancer in the ORD region.
+#>
+}
+
+function Remove-CloudLoadBalancerACL {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+        Write-Host "All ACL items have been deleted. Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerACLs -CloudLBID $CloudLBID -Region $Region
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+
+        Write-Host "All ACL items have been deleted. Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-CloudLoadBalancerACLs -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-CloudLoadBalancerACL cmdlet will remove ALL ACL items from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are modifying.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudLoadBalancerACLItem -CloudLBID 116351 -ACLItemID 1234 -Region ORD
+ This example shows how to remove an ACL item from the specified load balancer in the ORD region.
+#>
+}
+
 function Add-SessionPersistence {
 
     Param(
@@ -4448,7 +4756,7 @@ function Add-HealthMonitor {
 
  if ($Region -eq "DFW") {
         
-        ## Retrieving authentication token
+    ## Retrieving authentication token
     Get-AuthToken
         
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
@@ -4462,8 +4770,8 @@ function Add-HealthMonitor {
 
 elseif ($Region -eq "ORD") {
 
-            ## Retrieving authentication token
-    Get-AuthToken
+     ## Retrieving authentication token
+     Get-AuthToken
             
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4540,7 +4848,7 @@ function Remove-HealthMonitor {
  if ($Region -eq "DFW") {
         
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
         [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
@@ -4549,8 +4857,8 @@ function Remove-HealthMonitor {
 
 elseif ($Region -eq "ORD") {
 
-            ## Retrieving authentication token
-    Get-AuthToken
+        ## Retrieving authentication token
+        Get-AuthToken
             
             [xml]$HealthMonitorStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
 
@@ -4600,7 +4908,7 @@ function Add-ContentCaching {
  if ($Region -eq "DFW") {
         
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
         [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4610,7 +4918,7 @@ function Add-ContentCaching {
 elseif ($Region -eq "ORD") {
 
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
         [xml]$ContentCachingStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4660,7 +4968,7 @@ function Remove-ContentCaching {
  if ($Region -eq "DFW") {
         
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
         [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4670,7 +4978,7 @@ function Remove-ContentCaching {
 elseif ($Region -eq "ORD") {
 
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
         [xml]$ContentCachingStep0 =  Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4758,5 +5066,329 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Get-SSLTermination -CloudLBID 555 -Region ord
  This example shows how to retrieve the SSL termination settings from a cloud load balancer in the ORD region.
+#>
+}
+
+function Add-SSLTermination {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$SSLPort,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$PrivateKey,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$Certificate,
+        [Parameter(Position=4,Mandatory=$false)]
+        [string]$IntermediateCertificate,
+        [Parameter(Position=5,Mandatory=$false)]
+        [switch]$Enabled,
+        [Parameter(Position=6,Mandatory=$false)]
+        [switch]$SecureTrafficOnly,
+        [Parameter(Position=7,Mandatory=$true)]
+        [string]$Region
+        )
+
+    
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+
+    if (($enabled) -and ($SecureTrafficOnly)) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true" securePort="'+$SSLPort+'" secureTrafficOnly="true">
+        <privatekey>'+$PrivateKey+'</privatekey>
+        <certificate>'+$Certificate+'</certificate>
+        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
+        </sslTermination>'
+       
+    }
+
+    elseif (($enabled) -and (!$SecureTrafficOnly)) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true" securePort="'+$SSLPort+'" secureTrafficOnly="false">
+        <privatekey>'+$PrivateKey+'</privatekey>
+        <certificate>'+$Certificate+'</certificate>
+        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
+        </sslTermination>'
+       
+    }
+
+    elseif ((!$enabled) -and ($SecureTrafficOnly)) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false" securePort="'+$SSLPort+'" secureTrafficOnly="true">
+        <privatekey>'+$PrivateKey+'</privatekey>
+        <certificate>'+$Certificate+'</certificate>
+        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
+        </sslTermination>'
+       
+    }
+
+    elseif ((!$enabled) -and (!$SecureTrafficOnly)) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false" securePort="'+$SSLPort+'" secureTrafficOnly="false">
+        <privatekey>'+$PrivateKey+'</privatekey>
+        <certificate>'+$Certificate+'</certificate>
+        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
+        </sslTermination>'
+       
+    }
+
+
+
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+    Get-AuthToken
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+        
+        Write-Host "SSL termination has been configured.  Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+    Get-AuthToken
+        
+        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+        
+        Write-Host "SSL termination has been configured.  Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Add-SSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER SSLPort
+ Use this parameter to define the port on which the SSL termination load balancer will listen for secure traffic. The SSLPort must be unique to the existing LB protocol/port combination. For example, port 443.
+
+ .PARAMETER PrivateKey
+ Use this parameter to define the private key for the SSL certificate. The private key is validated and verified against the provided certificate(s).
+
+ .PARAMETER Certificate
+ Use this parameter to define the certificate used for SSL termination. The certificate is validated and verified against the key and intermediate certificate if provided.
+
+ .PARAMETER IntermediateCertificate
+ Use this parameter to define the user's intermediate certificate used for SSL termination. The intermediate certificate is validated and verified against the key and certificate credentials provided.
+
+ .PARAMETER Enabled
+ Use this switch to indicate if the load balancer is enabled to terminate SSL traffic. If the Enabled switch is not passed, the load balancer will retain its specified SSL attributes, but will NOT immediately terminate SSL traffic upon configuration.
+
+ .PARAMETER SecureTrafficOnly
+ Use this switch to indicate if the load balancer may accept only secure traffic. If the SecureTrafficOnly switch is passed, the load balancer will NOT accept non-secure traffic. 
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-SSLTermination -CloudLBID 116351 -SSLPort 443 -PrivateKey "PrivateKeyGoesHereInQuotes" -Certificate "CertificateGoesHereInQuotes" -Enabled -Region ORD
+ This example shows how to add SSL termination to a cloud load balancer in the ORD region.
+#>
+}
+
+function Update-SSLTermination {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$false)]
+        [switch]$EnableSSLTermination,
+        [Parameter(Position=2,Mandatory=$false)]
+        [switch]$DisableSSLTermination,
+        [Parameter(Position=3,Mandatory=$false)]
+        [switch]$UpdateSSLPort,
+        [Parameter(Position=4,Mandatory=$false)]
+        [string]$SSLPort,
+        [Parameter(Position=5,Mandatory=$false)]
+        [switch]$EnableSecureTrafficOnly,
+        [Parameter(Position=6,Mandatory=$false)]
+        [switch]$DisableSecureTraficOnly,
+        [Parameter(Position=7,Mandatory=$true)]
+        [string]$Region
+        )
+
+    
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+
+    if ($EnableSSLTermination) {
+        
+            [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"></sslTermination>'
+       
+    }
+
+    elseif ($DisableSSLTermination) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"></sslTermination>'
+       
+    }
+
+    elseif ($EnableSecureTrafficOnly) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" secureTrafficOnly="true"></sslTermination>'
+       
+    }
+
+    elseif ($DisableSecureTrafficOnly) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" secureTrafficOnly="false"></sslTermination>'
+       
+    }
+
+    elseif ($UpdateSSLPort) {
+        
+        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" securePort="'+$SSLPort+'"></sslTermination>'
+       
+    }
+
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+    Get-AuthToken
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+        
+        Write-Host "SSL termination configuration has been updated.  Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+    Get-AuthToken
+        
+        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+        
+        Write-Host "SSL termination configuration has been updated.  Please wait 10 seconds for confirmation:"
+
+        Sleep 10
+
+        Get-SSLTermination -CloudLBID $CloudLBID -Region $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Update-SSLTermination cmdlet will add SSL termination to a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ Using this cmdlet, you can alter the port in which you would like to accept secure traffic, whether or not you would like the load balancer to be SSL ONLY, and whether or not SSL termination is active or simply configured and standing by.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER UpdateSSLPort
+ Use this switch to indicate that you would like to update the port which your load balancer will be accepting secure traffic on. Define the new port with the SSLPort parameter.
+ 
+ .PARAMETER SSLPort
+ Use this parameter to define the port on which the SSL termination load balancer will listen for secure traffic. The SSLPort must be unique to the existing LB protocol/port combination. For example, port 443. Use this in conjunction with the UpdateSSLPort switch.
+
+ .PARAMETER EnableSSLTermination
+ Use this switch to indicate that SSL termination can be enabled on the specified load balancer. If this switch is passed, the load balancer will enact its configuration for SSL termination.
+
+ .PARAMETER DisableSSLTermination
+ Use this switch to indicate that SSL termination can be disabled on the specified load balancer. If this switch is passed, the load balancer will retain its configuration for SSL termination, however, it will not terminate SSL connections again until you re-enable it.
+
+ .PARAMETER EnableSecureTrafficOnly
+ Use this switch to indicate if the load balancer may accept only secure traffic. If this switch is passed, the load balancer will begin ONLY accepting secure traffic.  All non-secure traffic will be rejected.
+
+ .PARAMETER DisableSecureTrafficOnly
+ Use this switch to indicate if the load balancer may accept non-secure and secure traffic. If this switch is passed, the load balancer will begin accepting all types of traffic.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Update-SSLTermination -CloudLBID 116351 -DisableSSLTrafficOnly -Region ORD
+ This example shows how to update the SSL termination settings of a cloud load balancer in the ORD region. This example would configure the load balancer to accept both non-secure and secure traffic.
+#>
+}
+
+function Remove-SSLTermination {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$CloudLBID,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$Region
+        )
+
+    
+    ## Setting variables needed to execute this function
+    Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+
+ if ($Region -eq "DFW") {
+        
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        
+        Write-Host "All SSL settings have been removed."
+}
+
+elseif ($Region -eq "ORD") {
+
+        ## Retrieving authentication token
+        Get-AuthToken
+        
+        Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        
+        Write-Host "All SSL settings have been removed."
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Remove-SSLTermination cmdlet will remove all SSL termination settings from a cloud load balancer in the specified region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER CloudLBID
+ Use this parameter to define the ID of the load balancer you are about to modify.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-SSLTermination -CloudLBID 555 -Region ord
+ This example shows how to remove the SSL termination settings from a cloud load balancer in the ORD region.
 #>
 }
