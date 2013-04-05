@@ -1,8 +1,8 @@
 ﻿## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
 ## Description: PSv3 module for NextGen Rackspace Cloud API interaction (PowerClient)##
-## Version 1.9.1 ##
-## Contact Info: 210-312-5868 / mitch.robins@rackspace.com ##
+## Version 2.0 ##
+## Contact Info: mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
 
@@ -282,16 +282,32 @@ else {
  .DESCRIPTION
  See the synopsis field.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
- .EXAMPLE
+  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerImages -Region DFW
  This example shows how to get a list of all available images in your account within the DFW region.
 
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerImages ORD
- This example shows how to get a list of all available images in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+ This example shows how to get a list of all available images in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably. Example output:
+
+ 
+ PS C:\Users\mitch.robins> Get-CloudServerImages ord
+
+Image ID                             Image Name                                                                       Image Status Image Last Updated  
+--------                             ----------                                                                       ------------ ------------------  
+c94f5e59-0760-467a-ae70-9a37cfa6b94e Arch 2012.08                                                                     ACTIVE       2013-02-07T20:50:25Z
+03318d19-b6e6-4092-9b5c-4758ee0ada60 CentOS 5.6                                                                       ACTIVE       2013-02-07T20:51:03Z
+acf05b3c-5403-4cf0-900c-9b12b0db0644 CentOS 5.8                                                                       ACTIVE       2013-02-27T16:56:09Z
+a3a2c42f-575f-4381-9c6d-fcd3b7d07d17 CentOS 6.0                                                                       ACTIVE       2013-02-27T16:57:56Z
+0cab6212-f231-4abd-9c70-608d0d0e04ba CentOS 6.2                                                                       ACTIVE       2013-02-27T16:58:45Z
+c195ef3b-9195-4474-b6f7-16e5bd86acd0 CentOS 6.3                                                                       ACTIVE       2013-02-27T16:59:31Z
+...
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Images-d1e4427.html
 #>
 }
 
@@ -365,7 +381,7 @@ else {
  .DESCRIPTION
  See the synopsis field.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
@@ -375,6 +391,18 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServers ORD
  This example shows how to get a list of all servers deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+
+ PS C:\Users\mitch.robins> Get-CloudServers ord
+
+Server ID                            Server Name        Server Status Server IP Addresses                                                      
+---------                            -----------        ------------- -------------------                                                      
+abc123ab-a367-1234-970f-3e43617c194e AA-Mongo           ACTIVE        {IPs}  
+abc123ab-537c-1234-9a17-659c15a78ad7 Chad_AD            ACTIVE        {IPS}   
+abc123ab-6ee8-1234-b283-d768c6f33633 HotlabDJR2         ACTIVE        {IPs} 
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cs-devguide/content/List_Servers-d1e2078.html
+
 #>
 }
 
@@ -434,9 +462,17 @@ else {
     [xml]$ServerDetailStep0 = (Invoke-RestMethod -Uri $DFWServerDetailURI  -Headers $HeaderDictionary -Method Get)
     [xml]$ServerDetailFinal = ($ServerDetailStep0.innerxml)
     
-    $ServerDetailOut = @{"Server Name"=($ServerDetailFinal.server.name);"Server ID"=($ServerDetailFinal.server.id);"Server Image ID"=($ServerDetailFinal.server.image.id);"Server Flavor ID"=($ServerDetailFinal.server.flavor.id);"Server Last Updated"=($ServerDetailFinal.server.updated)}
-
-    $ServerDetailOut
+        Write-Host ` '
+    Server Status: '($ServerDetailFinal.server.status)'
+    Server Name: '($ServerDetailFinal.server.name)'
+    Server ID: '($ServerDetailFinal.server.id)'
+    Server Created: '($ServerDetailFinal.server.created)'
+    Server Last Updated: '($ServerDetailFinal.server.updated)'
+    Server Image ID: '($ServerDetailFinal.server.image.id)'
+    Server Flavor ID: '($ServerDetailFinal.server.flavor.id)'
+    Server IPv4: '($ServerDetailFinal.server.accessIPv4)'
+    Server IPv6: '($ServerDetailFinal.server.accessIPv6)'
+    Server Build Progress: '($ServerDetailFinal.server.progress)''
 
     }
 
@@ -448,11 +484,16 @@ else {
     [xml]$ServerDetailFinal = ($ServerDetailStep0.innerxml)
 
     Write-Host ` '
+    Server Status: '($ServerDetailFinal.server.status)'
     Server Name: '($ServerDetailFinal.server.name)'
     Server ID: '($ServerDetailFinal.server.id)'
+    Server Created: '($ServerDetailFinal.server.created)'
+    Server Last Updated: '($ServerDetailFinal.server.updated)'
     Server Image ID: '($ServerDetailFinal.server.image.id)'
     Server Flavor ID: '($ServerDetailFinal.server.flavor.id)'
-    Server Last Updated: '($ServerDetailFinal.server.updated)''
+    Server IPv4: '($ServerDetailFinal.server.accessIPv4)'
+    Server IPv6: '($ServerDetailFinal.server.accessIPv6)'
+    Server Build Progress: '($ServerDetailFinal.server.progress)''
 
     }
 
@@ -476,7 +517,7 @@ else {
  .PARAMETER CloudServerID
  Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
@@ -486,6 +527,23 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Bandwidth -Region ORD
  This example shows how to get explicit data about one cloud server from the ORD region, including bandwidth statistics.
+
+ PS C:\Users\mitch.robins> Get-CloudServerDetails -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD
+
+    Server Status:  ACTIVE 
+    Server Name:  AA-Mongo 
+    Server ID:  abc123ef-9876-abcd-1234-123456abcdef
+    Server Created:  2013-03-11T16:09:15Z 
+    Server Last Updated:  2013-03-11T16:14:27Z 
+    Server Image ID:  8a3a9f96-b997-46fd-b7a8-a9e740796ffd 
+    Server Flavor ID:  4 
+    Server IPv4:  100.100.100.100
+    Server IPv6:  2001:::::::15d0 
+    Server Build Progress:  100 
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Get_Server_Details-d1e2623.html
+
 #>
 }
 
@@ -532,7 +590,7 @@ else {
  .DESCRIPTION
  See synopsis.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
@@ -540,8 +598,24 @@ else {
  This example shows how to get flavor data from the DFW region.
 
   .EXAMPLE
- PS C:\Users\Administrator> Get-CloudServerDetails ORD
+ PS C:\Users\Administrator> Get-CloudServerFlavors ORD
  This example shows how to get flavor data from the ORD region, without specifying the parameter name itself.
+
+ PS C:\Users\mitch.robins> Get-CloudServerFlavors ORD
+
+Flavor ID Flavor Name             RAM (in MB) Disk Size Swap Size vCPUs Rx/Tx Factor
+--------- -----------             ----------- --------- --------- ----- ------------
+2         512MB Standard Instance 512         20        512       1     2.0         
+3         1GB Standard Instance   1024        40        1024      1     3.0         
+4         2GB Standard Instance   2048        80        2048      2     6.0         
+5         4GB Standard Instance   4096        160       2048      2     10.0        
+6         8GB Standard Instance   8192        320       2048      4     15.0        
+7         15GB Standard Instance  15360       620       2048      6     20.0        
+8         30GB Standard Instance  30720       1200      2048      8     30.0     
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Flavors-d1e4180.html
+
 #>
 }
 
@@ -598,7 +672,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudServerID
- Use this parameter to indicate the 32 character UUID of the cloud server to which you wish to view storage attachments. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+ Use this parameter to indicate the 32 character UUID of the cloud server which you wish to view storage attachments. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -606,6 +680,23 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerAttachments -CloudServerID e6ce2ee7-5d9a-4ef4-a78c-fe12f873f46c -Region ord
  This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the ORD region.
+
+ PS C:\Users\mitch.robins> Get-CloudServerAttachments -CloudServerID e6ce2ee7-5d9a-4ef4-a78c-fe12f873f46c -Region ord
+ This cloud server has no cloud block storage volumes attached.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudServerAttachments -CloudServerID 30e52067-e3ba-4bf6-98df-4e9b0e83e205 -Region DFW
+ This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the ORD region.
+
+PS C:\Users\mitch.robins> Get-CloudServerAttachments -CloudServerID 30e52067-e3ba-4bf6-98df-4e9b0e83e205 -Region DFW
+
+Attachment ID                        Attached Volume ID                   Attached Device Type
+-------------                        ------------------                   --------------------
+216fdfab-87a9-4963-aa11-6dd004ce0301 216fdfab-87a9-4963-aa11-6dd004ce0301 /dev/xvdb     
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Volume_Attachment_Actions.html
+
 #>
 }
 
@@ -633,8 +724,6 @@ function Add-CloudServer {
         ## Setting variables needed to execute this function
         Set-Variable -Name DFWNewServerURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers.xml"
         Set-Variable -Name ORDNewServerURI -Value "https://ord.servers.api.rackspacecloud.com/v2/$CloudDDI/servers.xml"
-
-        Get-AuthToken
 
     if ($CloudServerNetwork1ID) {
 
@@ -741,6 +830,8 @@ function Add-CloudServer {
             }
  
  if ($Region -eq "DFW") {
+
+        Get-AuthToken
         
         $NewCloudServer = Invoke-RestMethod -Uri $DFWNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         $NewCloudServerInfo = $NewCloudServer.innerxml
@@ -755,6 +846,8 @@ function Add-CloudServer {
                                    }
 
 elseif ($Region -eq "ORD") {
+
+        Get-AuthToken
         
         $NewCloudServer = Invoke-RestMethod -Uri $ORDNewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         $NewCloudServerInfo = $NewCloudServer.innerxml
@@ -810,6 +903,10 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Add-CloudServer NewlyCreatedTestServer1 4 c195ef3b-9195-4474-b6f7-16e5bd86acd0 ORD
  This example shows how to spin up a new CentOS 6.3 cloud server called "NewlyCreatedTestServer1", with 2GB RAM, 2 vCPU, and 80GB of lcoal storage, in the ORD region. Notice how parameter names were not needed in the command to save time.
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cs-devguide/content/CreateServers.html
+
 #>
 }
 
@@ -870,12 +967,16 @@ else {
  .PARAMETER NewImageName
  Use this parameter to define the name of the image snapshot that is about to be taken.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudServerImage  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -NewImageName SnapshotCopy1 -Region DFW
  This example shows how to create a new server image snapshot of a serve, UUID of "abc123ef-9876-abcd-1234-123456abcdef", and the snapshot being titled "SnapshotCopy1" in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Create_Image-d1e4655.html
+
 #>
 }
 
@@ -1108,6 +1209,9 @@ else {
  .PARAMETER NewNameOrAddressOrPasswordValue
  This field is where you would enter the *new* value of whatever you are trying to change.  If you are changing the name of the Rackspace Cloud Server, this is where you would enter the new name.
 
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
  .EXAMPLE
  PS C:\Users\Administrator> Update-CloudServer -UpdateName abc123ef-9876-abcd-1234-123456abcdef  New-Windows-Web-Server
  This example shows the command to rename a Rackspace Cloud Server with an ID of "abc123ef-9876-abcd-1234-123456abcdef" to a new name of "New-Windows-Web-Server".
@@ -1115,6 +1219,10 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Update-CloudServer -UpdateAdminPassword abc123ef-9876-abcd-1234-123456abcdef  NewC0mplexPassw0rd!
  This example shows the command to update the adminsitrative password of a Rackspace Cloud Server with an ID of "abc123ef-9876-abcd-1234-123456abcdef" to a new password of "NewC0mplexPassw0rd!".
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/ServerUpdate.html
+
 #>
 }
 
@@ -1196,9 +1304,9 @@ elseif ($Region -eq "ORD") {
  See synopsis.
 
  .PARAMETER CloudServerID
- Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+ Use this parameter to indicate the 32 character UUID of the cloud server of which you want to reboot. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
 
-  .PARAMETER CloudServerRegion
+  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .PARAMETER Hard
@@ -1211,6 +1319,10 @@ elseif ($Region -eq "ORD") {
  .EXAMPLE
  PS C:\Users\Administrator> Restart-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region DFW -Hard
  This example shows how to request a hard reboot of cloud server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Reboot_Server-d1e3371.html
+
 #>    
  }
 
@@ -1312,6 +1424,12 @@ elseif ($Region -eq "ORD") {
     Write-Host "Your Cloud Server will be resized based on your input. Run Get-CloudServers to check on the status of the build and be sure to confirm the resized server after rebuild."
     }
 }
+
+else {
+
+    Send-RegionError
+
+}
 <#
  .SYNOPSIS
  The Resize-CloudServer cmdlet will resize the specified cloud server to a new flavor.  After the original request, you can also use this command to either REVERT your changes, or CONFIRM them.
@@ -1320,9 +1438,9 @@ elseif ($Region -eq "ORD") {
  See synopsis.
 
  .PARAMETER CloudServerID
- Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+ Use this parameter to indicate the 32 character UUID of the cloud server which you want to resize. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .PARAMETER CloudServerFlavorID
@@ -1345,6 +1463,10 @@ elseif ($Region -eq "ORD") {
  .EXAMPLE
  PS C:\Users\Administrator> Resize-CloudServer  -CloudServerID abc123ef-9876-abcd-1234-123456abcdef -Region ORD -Revert
  This example shows how to revert the resizing of a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, in the ORD region, back to its previous size.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Resize_Server-d1e3707.html
+
 #>
 }
 
@@ -1382,6 +1504,10 @@ elseif ($Region -eq "ORD") {
     Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
 
     }
+
+else {
+    Send-RegionError
+}
 <#
  .SYNOPSIS
  The Remove-CloudServer cmdlet will permanently delete a cloud server from your account.
@@ -1390,9 +1516,9 @@ elseif ($Region -eq "ORD") {
  See synopsis.
 
  .PARAMETER CloudServerID
- Use this parameter to indicate the 32 character UUID of the cloud server of which you want explicit details. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+ Use this parameter to indicate the 32 character UUID of the cloud server that you would like to delete. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
@@ -1402,6 +1528,10 @@ elseif ($Region -eq "ORD") {
  .EXAMPLE
  PS C:\Users\Administrator> Restart-CloudServer  abc123ef-9876-abcd-1234-123456abcdef ORD
  This example shows how to delete a server, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the ORD region, without using the parameter names.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Delete_Server-d1e2883.html
+
 #>
 }
 
@@ -1454,7 +1584,7 @@ else {
  .PARAMETER CloudServerImageID
  Use this parameter to define the ID of the image that you would like to delete. If you are unsure of the image ID, run the "Get-CloudServerImages" command.
 
- .PARAMETER CloudServerRegion
+ .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
@@ -1464,6 +1594,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Restart-CloudServerImage  abc123ef-9876-abcd-1234-123456abcdef ORD
  This example shows how to delete a server image snapshot, UUID of abc123ef-9876-abcd-1234-123456abcdef, from the ORD region, without using the parameter names.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Delete_Image-d1e4957.html
+
 #>
 }
 
@@ -1587,7 +1721,7 @@ function Get-CloudBlockStorageTypes {
     Set-Variable -Name DFWCBSURI -Value "https://dfw.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/types.xml"
     Set-Variable -Name ORDCBSURI -Value "https://ord.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/types.xml"
 
-        if ($Region -eq "DFW") {    
+    if ($Region -eq "DFW") {    
     
     ## Retrieving authentication token
     Get-AuthToken
@@ -1610,7 +1744,7 @@ function Get-CloudBlockStorageTypes {
     [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
 
         ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolTypeFinal.volume_types.volume_type | ft $VolTable -AutoSize
+        $VolTypeFinal.volume_types.volume_type | ft $VolTypeTable -AutoSize
     }
 
     else {
@@ -1620,24 +1754,32 @@ function Get-CloudBlockStorageTypes {
     }
 <#
  .SYNOPSIS
- The Get-CloudBlockStorageVol cmdlet will retrieve a list of all attributes for a provided cloud block storage volume.
+ The Get-CloudBlockStorageTypes cmdlet will retrieve a list of all cloud block storage volume types.
 
  .DESCRIPTION
  See synopsis.
-
- .PARAMETER CloudBlockStorageVolID
- Use this parameter to define the ID of the cloud block storage volume that you would like to query.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol -Region DFW 
+ PS C:\Users\Administrator> Get-CloudBlockStorageTypes -Region DFW 
  This example shows how to list all cloud block storage volumes in the DFW region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol ORD
+ PS C:\Users\Administrator> Get-CloudBlockStorageTypes ORD
  This example shows how to list all cloud block storage volumes in the ORD region, without parameter names.
+
+ PS C:\Users\mitch.robins> Get-CloudBlockStorageTypes ord
+
+ID Name
+-- ----
+1  SATA
+2  SSD
+
+.LINK
+http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/GET_getVolumeTypes__v1__tenant_id__types.html
+
 #>
 }
 
@@ -1685,7 +1827,7 @@ function Get-CloudBlockStorageVolList {
     }
 <#
  .SYNOPSIS
- The Get-CloudBlockStorageVols cmdlet will retrieve a list of all cloud block storage volumes for the specified region.
+ The Get-CloudBlockStorageVolList cmdlet will retrieve a list of all cloud block storage volumes for the specified region.
 
  .DESCRIPTION
  See synopsis.
@@ -1694,12 +1836,23 @@ function Get-CloudBlockStorageVolList {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVols -Region DFW 
+ PS C:\Users\Administrator> Get-CloudBlockStorageVolList -Region DFW 
  This example shows how to list all cloud block storage volumes in the DFW region.
 
+ PS C:\Users\mitch.robins> Get-CloudBlockStorageVolList -Region DFW 
+
+Vol ID                               Vol Name      Vol Status Vol Type Vol Size Vol Desc. Vol Created        
+------                               --------      ---------- -------- -------- --------- -----------        
+216fdfab-87a9-1234-1234-6dd004ce0301 mitch_testing in-use     SATA     100      None      2013-03-20 22:07:37
+6754e10a-e7d0-1234-1234-e9a59fa2933e rhcsa-luks    in-use     SATA     100      None      2013-02-26 22:49:53
+
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVols ORD
+ PS C:\Users\Administrator> Get-CloudBlockStorageVolList ORD
  This example shows how to list all cloud block storage volumes in the ORD region, without parameter names.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/GET_getVolumesSimple__v1__tenant_id__volumes.html
+
 #>
 }
 
@@ -1761,12 +1914,22 @@ function Get-CloudBlockStorageVol {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol -Region DFW 
+ PS C:\Users\Administrator> Get-CloudBlockStorageVol -CloudBlockStorageVolID 216fdfab-1234-4963-aa11-6dd004ce0301 -Region DFW
  This example shows how to list details for a cloud block storage volume in the DFW region.
+
+ PS C:\Users\mitch.robins> Get-CloudBlockStorageVol -CloudBlockStorageVolID 216fdfab-87a9-4963-aa11-6dd004ce0301 -Region DFW
+
+ID                                   Name          Status Attached To                          Type Size Desc. Created            
+--                                   ----          ------ -----------                          ---- ---- ----- -------            
+216fdfab-1234-4963-aa11-6dd004ce0301 mitch_testing in-use 30e52067-e3ba-4bf6-98df-4e9b0e83e205 SATA 100  None  2013-03-20 22:07:37
 
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudBlockStorageVol ORD
  This example shows how to list details for a cloud block storage volume in the DFW region, without parameter names.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/GET_getVolume__v1__tenant_id__volumes.html
+
 #>
 }
 
@@ -1864,6 +2027,10 @@ function Add-CloudBlockStorageVol {
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudBlockStorageVol -CloudBlockStorageVolName Test2 -CloudBlockStorageVolDesc "another backupt test" -CloudBlockStorageVolSize 150 -CloudBlockStorageVolType SATA -Region dfw
  This example shows how to add a cloud block storage volume in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/POST_createVolume__v1__tenant_id__volumes.html
+
 #>
 }
 
@@ -1929,6 +2096,10 @@ function Remove-CloudBlockStorageVol {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudBlockStorageVol 5ea333b3-cdf7-40ee-af60-9caf871b15fa ORD
  This example shows how to list details for a cloud block storage volume in the DFW region, without parameter names.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/DELETE_deleteVolume__v1__tenant_id__volumes.html
+
 #>
 }
 
@@ -1989,8 +2160,12 @@ function Get-CloudBlockStorageSnapList {
  This example shows how to list all cloud block storage snapshots in the DFW region.
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol ORD
+ PS C:\Users\Administrator> Get-CloudBlockStorageSnapList ORD
  This example shows how to list all cloud block storage snapshots in the ORD region, without parameter names.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/GET_getSnapshotsSimple__v1__tenant_id__snapshots.html
+
 #>
 }
 
@@ -2052,12 +2227,22 @@ function Get-CloudBlockStorageSnap {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageSnap -Region DFW 
+ PS C:\Users\Administrator> Get-CloudBlockStorageSnap -CloudBlockStorageSnapID 5ea333b3-cdf7-40ee-af60-9caf871b15fa -Region DFW
  This example shows how to list details for a cloud block storage snapshot in the DFW region.
 
+ PS C:\Users\mitch.robins> Get-CloudBlockStorageSnap -CloudBlockStorageSnapID 5ea333b3-1234-40ee-af60-9caf871b15fa -Region DFW
+
+Snap ID                              Name                Status    Progress Vol. ID                              Size Desc. Created            
+-------                              ----                ------    -------- -------                              ---- ----- -------            
+5ea333b3-1234-40ee-af60-9caf871b15fa rhcsa-luks-snaptest available 0%       6754e10a-1234-47f5-b181-e9a59fa2933e 100  None  2013-03-20 17:54:39
+
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudBlockStorageVol ORD
- This example shows how to list details for a cloud block storage snapshot in the DFW region, without parameter names.
+ PS C:\Users\Administrator> Get-CloudBlockStorageSnap -CloudBlockStorageSnapID abc123ab-1234-40ee-af60-9caf871b15fa -Region ORD
+ This example shows how to list details for a cloud block storage snapshot in the ORD region, without parameter names.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/GET_getSnapshot__v1__tenant_id__snapshots.html
+
 #>
 }
 
@@ -2152,6 +2337,10 @@ function Add-CloudBlockStorageSnap {
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudBlockStorageSnap -CloudBlockStorageVolID 5ea333b3-cdf7-40ee-af60-9caf871b15fa -CloudBlockStorageSnapName Snapshot-Test -CloudBlockStorageSnapDesc This is a test snapshot -Region DFW -Force
  This example shows how to add a cloud block storage snapshot in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/POST_createSnapshot__v1__tenant_id__snapshots.html
+
 #>
 }
 
@@ -2205,7 +2394,7 @@ function Remove-CloudBlockStorageSnap {
  See synopsis.
 
  .PARAMETER CloudBlockStorageSnapID
- Use this parameter to define the ID of the cloud block storage snapshot that you would like to query.
+ Use this parameter to define the ID of the cloud block storage snapshot that you would like to delete.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -2217,6 +2406,10 @@ function Remove-CloudBlockStorageSnap {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudBlockStorageSnap 5ea333b3-cdf7-40ee-af60-9caf871b15fa ORD
  This example shows how to list details for a cloud block storage snapshot in the DFW region, without parameter names.
+
+ .LINK
+ http://docs.rackspace.com/cbs/api/v1.0/cbs-devguide/content/DELETE_deleteSnapshot__v1__tenant_id__snapshots.html
+
 #>
 }
 
@@ -2280,8 +2473,8 @@ else {
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
- .EXAMPLE
- PS C:\Users\Administrator> 
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Attach_Volume_to_Server.html
 
 #>
 }
@@ -2335,13 +2528,13 @@ else {
  See synopsis.
 
  .PARAMETER CloudServerID
- Use this parameter to indicate the 32 character UUID of the cloud server to which you wish to attach storage. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
+ Use this parameter to indicate the 32 character UUID of the cloud server to which you wish to detach storage. If you need to find this information, you can run the "Get-CloudServers" cmdlet for a complete listing of servers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
- .EXAMPLE
- PS C:\Users\Administrator> 
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Delete_Volume_Attachment.html
 
 #>
 }
@@ -2410,6 +2603,17 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudNetworks ORD
  This example shows how to get a list of all networks deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+
+ PS C:\Users\mitch.robins> Get-CloudNetworks ORD
+ 
+ Network Name           Assigned Block   Network ID                          
+------------           --------------   ----------                          
+MitchPSTest            192.168.0.0/16   03debf75-1234-4c90-8015-5de15ffbb93b
+Nicks-192.168.100.0/24 192.168.100.0/24 3901a409-1234-4457-bf69-d0db01ea40f4
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
+
 #>
 }
 
@@ -2470,7 +2674,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudNetworkLabel
- Use this parameter to define the name/label of the cloud network you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+ Use this parameter to define the name/label of the cloud network you are about to create.
 
  .PARAMETER CloudNetworkCIDR
  Use this parameter to define the IP block that is going to be used for this cloud network.  This must be written in CIDR notation, for example, "172.16.0.0/24" without the quotes.
@@ -2485,6 +2689,10 @@ else {
 .EXAMPLE
  PS C:\Users\Administrator> Add-CloudNetwork PaymentServers 192.168.101.0/24 ORD
  This example shows how to spin up a new cloud network called PaymentServers, which will service IP block 192.168.101.0/24 in the ORD region, without using the parameter names.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cn-devguide/content/create_virtual_interface.html
+
 #>
 }
 
@@ -2531,7 +2739,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudNetworkID
- Use this parameter to define the name/label of the cloud network you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+ Use this parameter to define the name/label of the cloud network you are about to delete.
 
 .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -2543,6 +2751,10 @@ else {
 .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudNetwork 88e316b1-8e69-4591-ba92-bea8bb1837f5 DFW
  This example shows how to delete a cloud network with an ID of 88e316b1-8e69-4591-ba92-bea8bb1837f5 from the DFW region, without the parameter names.
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cn-devguide/content/delete_network.html
+
 #>
 }
 
@@ -2630,6 +2842,17 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancers ORD
  This example shows how to get a list of all load balancers deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+
+ PS C:\Users\mitch.robins>  Get-CloudLoadBalancers ORD
+
+CLB ID CLB Name            CLB Status CLB Algorithm              CLB Port CLB Node Count
+------ --------            ---------- -------------              -------- --------------
+1234   andrei-lb           ACTIVE     RANDOM                     443      2             
+12345  josh-lb-plesk       ACTIVE     LEAST_CONNECTIONS          80       1             
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/List_Load_Balancers-d1e1367.html
+
 #>
 }
 
@@ -2750,6 +2973,10 @@ See synopsis.
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancerDetails 12345 ORD
  This example shows how to get explicit data about one cloud load balancer from the ORD region, without using the parameter names.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/List_Load_Balancer_Details-d1e1522.html
+
 #>
 }
 
@@ -2778,6 +3005,10 @@ function Get-CloudLoadBalancerProtocols{
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancerProtocols
  This example shows how to get a list of all load balancer protocols available for use.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/List_Load_Balancing_Protocols-d1e4269.html
+
 #>
 }
 
@@ -2806,6 +3037,10 @@ function Get-CloudLoadBalancerAlgorithms{
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancerAlgorithms
  This example shows how to get a list of all load balancer algorithms available for use.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/List_Load_Balancing_Algorithms-d1e4459.html
+
 #>
 }
 
@@ -2834,8 +3069,6 @@ function Add-CloudLoadBalancer {
         Set-Variable -Name DFWNewLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
         Set-Variable -Name ORDNewLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
 
-        Get-AuthToken
-
 [xml]$NewCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
 	name="'+$CloudLBName+'" 
 	port="'+$CloudLBPort+'"
@@ -2850,6 +3083,8 @@ function Add-CloudLoadBalancer {
 </loadBalancer>'
  
  if ($Region -eq "DFW") {
+
+                Get-AuthToken
         
         $NewCloudLB = Invoke-RestMethod -Uri $DFWNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
@@ -2881,6 +3116,8 @@ function Add-CloudLoadBalancer {
                                    }
 
 elseif ($Region -eq "ORD") {
+
+        Get-AuthToken
 
         $NewCloudLB = Invoke-RestMethod -Uri $ORDNewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
         [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
@@ -2952,6 +3189,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Create_Load_Balancer-d1e1635.html
+
 #>
 }
 
@@ -3046,6 +3287,10 @@ else {
   .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList 12345 ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/List_Nodes-d1e2218.html
+
 #>
 }
 
@@ -3118,7 +3363,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+ Use this parameter to define the name of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER CloudLBNodeIP
  Use this parameter to define the private IP address of the first node you wish to have served by this load balancer. This MUST be a functional and legitimate IP, or this command will fail run properly.
@@ -3144,9 +3389,9 @@ else {
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
- .EXAMPLE
- PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
- This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Add_Nodes-d1e2379.html
+
 #>
 }
 
@@ -3165,9 +3410,9 @@ function Remove-CloudLoadBalancerNode {
         Set-Variable -Name DFWNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
         Set-Variable -Name ORDNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
 
-        Get-AuthToken
-
      if ($Region -eq "DFW") {
+
+        Get-AuthToken
         
         $DelCloudLBNode = Invoke-RestMethod -Uri $DFWNodeURI -Headers $HeaderDictionary -Method Delete
 	
@@ -3175,6 +3420,8 @@ function Remove-CloudLoadBalancerNode {
 	}
 
 elseif ($Region -eq "ORD") {
+
+        Get-AuthToken
 
         $DelCloudLBNode = Invoke-RestMethod -Uri $ORDNodeURI -Headers $HeaderDictionary -Method Delete
 	
@@ -3193,7 +3440,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the name of the load balancer you are about to create. Whatever you enter here will be exactly what is displayed as the server name in further API requests and/or the Rackspace Cloud Control Panel.
+ Use this parameter to define the name of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER CloudLBNodeID
  Use this parameter to define the ID of the node you wish to remove from the load balancer configuration.
@@ -3204,6 +3451,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudLoadBalancerNode -CloudLBID 123456 -CloudLBNodeID 5 -Region DFW
  This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Remove_Nodes-d1e2675.html
+
 #>
 }
 
@@ -3220,20 +3471,22 @@ function Remove-CloudLoadBalancer {
         Set-Variable -Name DFWNodeURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
         Set-Variable -Name ORDNodeURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
 
-        Get-AuthToken
-
      if ($Region -eq "DFW") {
+
+        Get-AuthToken        
         
         $DelCloudLBNode = Invoke-RestMethod -Uri $DFWNodeURI -Headers $HeaderDictionary -Method Delete
 	
-    Write-Host "The load balancer has been deleted."
+        Write-Host "The load balancer has been deleted."
 	}
 
 elseif ($Region -eq "ORD") {
 
+        Get-AuthToken        
+
         $DelCloudLBNode = Invoke-RestMethod -Uri $ORDNodeURI -Headers $HeaderDictionary -Method Delete
 	
-    Write-Host "The load balancer has been deleted."
+        Write-Host "The load balancer has been deleted."
 	}
 
 else {
@@ -3248,7 +3501,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the name of the load balancer you are about to remove.
+ Use this parameter to define the name of the load balancer you are about to remove. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -3256,6 +3509,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudLoadBalancer -CloudLBID 123456 -Region DFW
  This example shows how to remove a load balancer with an ID of 12345 in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Remove_Load_Balancer-d1e2093.html
+
 #>
 }
 
@@ -3353,7 +3610,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER CloudLBName
  Use this parameter to define the name of the specified load balancer.
@@ -3388,9 +3645,9 @@ else {
 .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
- .EXAMPLE
- PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
- This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Update_Load_Balancer_Attributes-d1e1812.html
+
 #>
 }
 
@@ -3421,8 +3678,6 @@ function Update-CloudLoadBalancerNode {
         Set-Variable -Name DFWLBURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
         Set-Variable -Name ORDLBURI -Value "https://ord.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
 
-        Get-AuthToken
-
         if ($ChangeCondition) {
             [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" condition="'+$CloudLBNodeCondition.ToUpper()+'"/>'
         }
@@ -3436,6 +3691,8 @@ function Update-CloudLoadBalancerNode {
         }
 
  if ($Region -eq "DFW") {
+
+        Get-AuthToken
         
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -3447,6 +3704,8 @@ function Update-CloudLoadBalancerNode {
 }
 
 elseif ($Region -eq "ORD") {
+
+            Get-AuthToken
 
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -3469,7 +3728,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER CloudLBNodeID
  Use this parameter to define the ID of the node you are about to modify.
@@ -3512,8 +3771,12 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-CloudLoadBalancer -CloudLBName TestLB -CloudLBPort 80 -CloudLBProtocol HTTP -CloudLBAlgorithm RANDOM -CloudLBNodeIP 10.1.1.10 -CloudLBNodePort 80 -CloudLBNodeCondition ENABLED  -Region DFW
- This example shows how to spin up a new load balancer called TestLB, balancing incoming HTTP port 80 traffic randomly to a server with a private IP address of 10.1.1.10 on port 80, in the DFW region.
+ PS C:\Users\Administrator> Update-CloudLoadBalancer -ChangeType -CloudLBID 12345 -CloudLBNodeID 1234 -CloudLBNodeType SECONDARY -Region DFW
+ This example shows how to modify a load balancer node to become SECONDARY in the DFW region.
+
+ .LINK
+http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Modify_Nodes-d1e2503.html
+
 #>
 }
 
@@ -3566,7 +3829,7 @@ else {
     }
 <#
  .SYNOPSIS
- The Get-CloudLoadBalancerNodeList cmdlet will pull down a list of all nodes that are currently provisioned behind the specified load balancer.
+ The Get-CloudLoadBalancerNodeEvents cmdlet will pull retrieve all service events from the specified load balancer.
 
  .DESCRIPTION
  See the synopsis field.
@@ -3578,12 +3841,23 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList -CloudLBID 12345 -Region DFW
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodeEvents -CloudLBID 12345 -Region DFW
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the DFW region.
 
   .EXAMPLE
- PS C:\Users\Administrator> Get-CloudLoadBalancerNodeList 12345 ORD
+ PS C:\Users\Administrator> Get-CloudLoadBalancerNodeEvents -CloudLBID 12345 -Region ORD
  This example shows how to get a list of all nodes currently provisioned behind a load balancer with an ID of 12345, from the ORD region, without using the parameter names.
+
+ PS C:\Users\mitch.robins> Get-CloudLoadBalancerNodeEvents -CloudLBID 12345 -Region ORD
+
+Node ID Node Msg                                        CLB ID Msg Title           Msg Description                                                   Msg Type    Msg Severity Msg Created        
+------- --------                                        ------ ---------           ---------------                                                   --------    ------------ -----------        
+38484   Timeout while waiting for valid server response 1234   Node Status Updated Node '38484' status changed to 'OFFLINE' for load balancer '9956' UPDATE_NODE INFO         03-30-2013 17:07:47
+38485   Timeout while waiting for valid server response 1234   Node Status Updated Node '38485' status changed to 'OFFLINE' for load balancer '9956' UPDATE_NODE INFO         03-30-2013 17:07:50
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Node-Events-d1e264.html
+
 #>
 }
 
@@ -3657,7 +3931,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are querying.
+ Use this parameter to define the ID of the load balancer you are querying. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -3665,6 +3939,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudLoadBalancerACLs -CloudLBID 51885 -Region DFW
  This example shows how to get all ACL items from the specified load balancer in the DFW region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Access_Lists-d1e3187.html
+
 #>
 }
 
@@ -3731,7 +4009,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are modifying.
+ Use this parameter to define the ID of the load balancer you are modifying. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER IP
  Use this parameter to define the IP address for item to add to access list.  This can a single IP, such as "5.5.5.5" or a CIDR notated range, such as "172.50.0.0/16".
@@ -3749,6 +4027,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-CloudLoadBalancerACL -CloudLBID 116351 -IP 5.5.5.5/32 -Action deny -Region ord
  This example shows how to add an ACL item for the specified load balancer in the ORD region.  This example shows how to explicitly block a single IP from being served by your load balancer, the IP being 5.5.5.5.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Access_Lists-d1e3187.html
+
 #>
 }
 
@@ -3810,7 +4092,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are modifying.
+ Use this parameter to define the ID of the load balancer you are modifying. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
   .PARAMETER ACLItemID
  Use this parameter to define the ID of the ACL item that you would like to remove. If you are unsure of this ID, please run the "Get-CloudLoadBalancerACLs" cmdlet.
@@ -3821,6 +4103,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudLoadBalancerACLItem -CloudLBID 116351 -ACLItemID 1234 -Region ORD
  This example shows how to remove an ACL item from the specified load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Access_Lists-d1e3187.html
+
 #>
 }
 
@@ -3880,7 +4166,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are modifying.
+ Use this parameter to define the ID of the load balancer you are modifying. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -3888,6 +4174,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-CloudLoadBalancerACLItem -CloudLBID 116351 -ACLItemID 1234 -Region ORD
  This example shows how to remove an ACL item from the specified load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Access_Lists-d1e3187.html
+
 #>
 }
 
@@ -3968,7 +4258,7 @@ else {
  See the synopsis field.
 
  .PARAMETER CloudLBID
- Use this parameter to indicate the ID of the cloud load balancer of which you want to enabled session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ Use this parameter to indicate the ID of the cloud load balancer of which you want to enable session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
  
  .PARAMETER PeresistenceType
  Use this parameter to define the type of persistence you would like to enable on the specified load balancer.  The following modes of persistence are supported:
@@ -3982,6 +4272,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-SessionPersistence -CloudLBID 116351 -PersistenceType source_ip -Region ord
  This example shows how to add source IP based session persistence to a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Session_Persistence-d1e3733.html
+
 #>
 }
 
@@ -4062,7 +4356,7 @@ else {
  See the synopsis field.
 
  .PARAMETER CloudLBID
- Use this parameter to indicate the ID of the cloud load balancer of which you want to enabled session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ Use this parameter to indicate the ID of the cloud load balancer of which you want to update session persistence settings. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
  
  .PARAMETER PeresistenceType
  Use this parameter to define the type of persistence you would like to enable on the specified load balancer.  The following modes of persistence are supported:
@@ -4076,6 +4370,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Update-SessionPersistence -CloudLBID 116351 -PersistenceType source_ip -Region ord
  This example shows how to update the session persistence type to "SOURCE_IP" of a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Session_Persistence-d1e3733.html
+
 #>
 }
 
@@ -4144,7 +4442,7 @@ else {
  See the synopsis field.
 
  .PARAMETER CloudLBID
- Use this parameter to indicate the ID of the cloud load balancer of which you want to enabled session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
+ Use this parameter to indicate the ID of the cloud load balancer from which you want to disable session persistence. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
  
  .PARAMETER PeresistenceType
  Use this parameter to define the type of persistence you would like to enable on the specified load balancer.  The following modes of persistence are supported:
@@ -4158,6 +4456,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-SessionPersistence -CloudLBID 116351 -Region ord
  This example shows how to disable based session persistence on a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Manage_Session_Persistence-d1e3733.html
+
 #>
 }
 
@@ -4178,6 +4480,8 @@ function Add-ConnectionLogging {
     [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"/>'
 
  if ($Region -eq "DFW") {
+
+        Get-AuthToken
         
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4189,6 +4493,8 @@ function Add-ConnectionLogging {
 }
 
 elseif ($Region -eq "ORD") {
+
+            Get-AuthToken
 
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4211,7 +4517,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -4219,6 +4525,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
  This example shows how to enable connection logging on a CLB in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Log_Connections-d1e3924.html
+
 #>
 }
 
@@ -4239,6 +4549,8 @@ function Remove-ConnectionLogging {
     [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"/>'
 
  if ($Region -eq "DFW") {
+
+        Get-AuthToken
         
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4250,6 +4562,8 @@ function Remove-ConnectionLogging {
 }
 
 elseif ($Region -eq "ORD") {
+
+            Get-AuthToken
 
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4272,14 +4586,18 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
+ PS C:\Users\Administrator> Remove-ConnectionLogging -CloudLBID 116351 -Region ord
  This example shows how to disable connection logging on a CLB in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Log_Connections-d1e3924.html
+
 #>
 }
 
@@ -4288,13 +4606,13 @@ function Add-ConnectionThrottling {
     Param(
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudLBID,
-        [Parameter(Position=1,Mandatory=$true)]
+        [Parameter(Position=1,Mandatory=$false)]
         [int]$MaxConnectionRate,
-        [Parameter(Position=2,Mandatory=$true)]
+        [Parameter(Position=2,Mandatory=$false)]
         [int]$MaxConnections,
-        [Parameter(Position=3,Mandatory=$true)]
+        [Parameter(Position=3,Mandatory=$false)]
         [int]$MinConnections,
-        [Parameter(Position=4,Mandatory=$true)]
+        [Parameter(Position=4,Mandatory=$false)]
         [int]$RateInterval,
         [Parameter(Position=5,Mandatory=$true)]
         [string]$Region
@@ -4312,6 +4630,8 @@ function Add-ConnectionThrottling {
     rateInterval="'+$RateInterval+'" />'
 
  if ($Region -eq "DFW") {
+
+        Get-AuthToken
         
         Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4319,10 +4639,12 @@ function Add-ConnectionThrottling {
 
         Sleep 10
 
-        Get-CloudLoadBalancerDetails $CloudLBID DFW
+        Get-CloudLoadBalancerDetails $CloudLBID $Region
 }
 
 elseif ($Region -eq "ORD") {
+
+            Get-AuthToken
 
             Invoke-RestMethod -Uri $ORDLBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
 
@@ -4330,7 +4652,7 @@ elseif ($Region -eq "ORD") {
 
             Sleep 10
 
-            Get-CloudLoadBalancerDetails $CloudLBID ORD
+            Get-CloudLoadBalancerDetails $CloudLBID $Region
 }
 
 else {
@@ -4345,7 +4667,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER MaxConnectionRate
  Use this parameter to define the maximum number of connections allowed from a single IP address in the defined "RateInterval" parameter. Setting a value of 0 allows an unlimited connection rate; otherwise, set a value between 1 and 100000.
@@ -4363,8 +4685,12 @@ else {
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
 
  .EXAMPLE
- PS C:\Users\Administrator> Add-ConnectionLogging -CloudLBID 116351 -Region ord
+ PS C:\Users\Administrator> Add-ConnectionThrottling -CloudLBID 116351 -Region ord
  This example shows how to enable connection logging on a CLB in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Throttle_Connections-d1e4057.html
+
 #>
 }
 
@@ -4513,6 +4839,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Update-ConnectionThrottling -CloudLBID 116351 -ChangeMaxConnections -MaxConnections 150 -Region ord
  This example shows how to update the MaxConnections value of a CLB in the ORD region
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Throttle_Connections-d1e4057.html
+
 #>
 }
 
@@ -4570,7 +4900,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -4578,6 +4908,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-ConnectionThrottling -CloudLBID 116351 -Region ord
  This example shows how to disable connection throttling on a CLB in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Throttle_Connections-d1e4057.html
+
 #>
 }
 
@@ -4672,7 +5006,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to query. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -4680,6 +5014,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Get-HealthMonitor -CloudLBID 9956 -Region ord
  This example shows how to get the status and configuration of a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Monitor_Health-d1e3434.html
+
 #>
 }
 
@@ -4794,7 +5132,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER WatchConnections
  Use this switch to indicate that you'd like to setup a basic connection health monitor. The monitor connects to each node on its defined port to ensure that the service is listening properly. The connect monitor is the most basic type of health check and does no post-processing or protocol specific health checks.
@@ -4826,9 +5164,15 @@ else {
  .PARAMETER MonitorHostHeader        
  Use this parameter to define the name of a host for which the health monitors will check. This parameter is only needed for an HTTP/HTTPS type monitor.
 
-
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Monitor_Connections-d1e3536.html
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Monitor_HTTP_and_HTTPS-d1e3635.html
+
 #>
 }
 
@@ -4872,13 +5216,13 @@ else {
     }
 <#
  .SYNOPSIS
- The Remove-HealthMonitor cmdlet will remove a health monitor from a cloud load balancer in the specified region.
+ The Remove-HealthMonitor cmdlet will remove a health monitor from a cloud load balancer in the specified region. 
 
  .DESCRIPTION
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -4886,6 +5230,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-HealthMonitor -CloudLBID 9956 -Region ord
  This example shows how to remove health mointoring from a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/Monitor_Health-d1e3434.html
+
 #>
 }
 
@@ -4938,7 +5286,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -4946,6 +5294,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-ContentCaching -CloudLBID 9956 -Region ord
  This example shows how to enable content caching for a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/ContentCaching-d1e3358.html
+
 #>
 }
 
@@ -4998,7 +5350,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -5006,6 +5358,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-ContentCaching -CloudLBID 9956 -Region ord
  This example shows how to remove content caching from a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/ContentCaching-d1e3358.html
+
 #>
 }
 
@@ -5058,7 +5414,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to query. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -5066,6 +5422,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Get-SSLTermination -CloudLBID 555 -Region ord
  This example shows how to retrieve the SSL termination settings from a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/SSLTermination-d1e2479.html
+
 #>
 }
 
@@ -5179,7 +5539,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER SSLPort
  Use this parameter to define the port on which the SSL termination load balancer will listen for secure traffic. The SSLPort must be unique to the existing LB protocol/port combination. For example, port 443.
@@ -5205,6 +5565,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Add-SSLTermination -CloudLBID 116351 -SSLPort 443 -PrivateKey "PrivateKeyGoesHereInQuotes" -Certificate "CertificateGoesHereInQuotes" -Enabled -Region ORD
  This example shows how to add SSL termination to a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/SSLTermination-d1e2479.html
+
 #>
 }
 
@@ -5306,7 +5670,7 @@ else {
  Using this cmdlet, you can alter the port in which you would like to accept secure traffic, whether or not you would like the load balancer to be SSL ONLY, and whether or not SSL termination is active or simply configured and standing by.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER UpdateSSLPort
  Use this switch to indicate that you would like to update the port which your load balancer will be accepting secure traffic on. Define the new port with the SSLPort parameter.
@@ -5332,6 +5696,10 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Update-SSLTermination -CloudLBID 116351 -DisableSSLTrafficOnly -Region ORD
  This example shows how to update the SSL termination settings of a cloud load balancer in the ORD region. This example would configure the load balancer to accept both non-secure and secure traffic.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/SSLTermination-d1e2479.html
+
 #>
 }
 
@@ -5382,7 +5750,7 @@ else {
  See synopsis.
 
  .PARAMETER CloudLBID
- Use this parameter to define the ID of the load balancer you are about to modify.
+ Use this parameter to define the ID of the load balancer you are about to modify. If you need to find this information, you can run the "Get-CloudLoadBalancers" cmdlet for a complete listing of load balancers.
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
@@ -5390,5 +5758,9 @@ else {
  .EXAMPLE
  PS C:\Users\Administrator> Remove-SSLTermination -CloudLBID 555 -Region ord
  This example shows how to remove the SSL termination settings from a cloud load balancer in the ORD region.
+
+ .LINK
+ http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/content/SSLTermination-d1e2479.html
+
 #>
 }
