@@ -132,6 +132,7 @@ For the sake of ease, place the “PowerClient” folder in the 2nd listed folde
 Set-Variable -Name CloudUsername -Value "" -Scope Global
 Set-Variable -Name CloudAPIKey -Value "" -Scope Global
 Set-Variable -Name CloudDDI -Value "" -Scope Global
+## *The CloudDDI variable is your account number or tenant ID.  This can be found at the top right of your screen when logged into the Rackspace Cloud Control Panel*
 ```
 
 After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure. <b>It would also help you to extend your Powershell window and screen buffer size to the maximum your screen can support for easiest reading.</b>
