@@ -9,7 +9,8 @@
 Set-Variable -Name CloudUsername -Value "" -Scope Global
 Set-Variable -Name CloudAPIKey -Value "" -Scope Global
 Set-Variable -Name CloudDDI -Value "" -Scope Global
-## THIS VARIABLE WILL NOT BE USED IN V2 - Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
+## *The CloudDDI variable is your account number or tenant ID.  This can be found at the top right of your screen when logged into the Rackspace Cloud Control Panel*
+## THIS VARIABLE WILL NOT BE USED IN V1 - Set-Variable -Name GlobalServerRegion -Value "ORD" -Scope Global
 
 ## Allow unlimited enumeration
 $FormatEnumerationLimit = -1
