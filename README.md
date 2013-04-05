@@ -123,7 +123,7 @@ The way this script is built as a Powershell module. Start by downloading as a Z
     
     a.	%UserProfile%\Documents\WindowsPowerShell\Modules
 
-For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above.  Once you’ve placed the folder in its new location, edit the “RSCloud.psm1” with Notepad (or you’re preferred text editor). In this file, the following lines need to be edited with you Rackspace cloud account information (please your information between the double quotes):
+For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above.  Once you’ve placed the folder in its new location, edit the “RSCloud.psm1” with Notepad (or you’re preferred text editor). In this file, the following lines need to be edited with you Rackspace cloud account information (place your information between the double quotes):
 
 ```Powershell
 
