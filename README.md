@@ -44,11 +44,17 @@ For the sake of ease, place the “PowerClient” folder in the 2nd listed folde
 
 After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure. <b>It would also help you to extend your Powershell window and screen buffer size to the maximum your screen can support for easiest reading.</b>
 
-<h2>Additional Information</h2>
+<h2>Additional Information / ProTips</h2>
 
 Help for individual commands are built into the module and can be viewed by using normal Powershell cmdlets, for example "Get-Help Get-CloudServers".  To get more information, I will be maintaining a small wiki with supported command overviews, future work plans, and more help. It can be found here: 
 
 https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
+
+<h3>Protips!</h3>
+
+* Protip #1 - Maxmize your window and screen buffer sizes to get the most output possible in your Powershell window.
+
+
 
 
 <b>This is NOT a Rackspace sponsored project. I am a Solutions Engineer with Rackspace and am writing this script as a personal project and eventual contribution into OpenStack.</b>
