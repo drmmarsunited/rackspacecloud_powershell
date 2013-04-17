@@ -143,7 +143,7 @@ Set-Variable -Name CloudDDI -Value "" -Scope Global
 ## *The CloudDDI variable is your account number or tenant ID.  This can be found at the top right of your screen when logged into the Rackspace Cloud Control Panel*
 ```
 
-After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure. <b>It would also help you to extend your Powershell window and screen buffer size to the maximum your screen can support for easiest reading.</b>
+After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
 
 <h2>Are there any other sources for information or tips for PowerClient?</h2>
 
@@ -153,5 +153,5 @@ https://github.com/drmmarsunited/rackspacecloud_powershell/wiki
 
 <h3>Pro tips!</h3>
 
-* Pro tip #1 - Maxmize your window and screen buffer sizes to get the most output possible in your Powershell window.
+* Pro tip #1 - Maximize your window and screen buffer sizes to get the most output possible in your Powershell window.
 * Pro tip #2 - Towards the top of the module, every command has an alias that is commented out.  You can uncomment these lines to make using this module even easier for yourself and other administrators.
