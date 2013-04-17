@@ -1,10 +1,16 @@
 <h1>PowerClient - Rackspace Cloud API Powershell Client</h1>
 
-<h2>Introduction</h2>
+<h2>Who am I and why should you use this client?</h2>
 
-PowerClient is a Powershell API client for Rackspace’s public cloud environment.  It is setup to work with Rackspace’s “NextGen” servers, based on Openstack.  The plan is to port this management client to be able to be implemented in ANY Openstack environment, however, no timeframe has been established on this milestone yet.  
+Excellent questions, I am fan of due dilligence! My name is Mitch Robins and I approve this client.  All kidding aside, my name is actually Mitch Robins and I am a sales engineer in the SMB segement for Rackspace. The idea for this client was born out of utter frustration around the lack of cloud management tools available that were natively supported in Windows. Over the last 6 months, I have spent a large amount of personal time, and some Rackspace sponsored time, in getting this tool developed to specifically fill this gap and make life easier for Windows users.  Having 15+ years in the trenches with Windows (from desktop support to solutions architecture), this was the perfect opportunity to be able to contribute to the Windows community to help with cloud management and adoption.
 
-This module is utilizing standard function definitions, and can be added to as needed, if you want to enable your own custom cmdlets.  Here is an example of one entire cmdlet, including help documentation for it:
+<h2>What is PowerClient?</h2>
+
+For Rackspace Cloud and Openstack deployments, there is a fantastic CLI called "NovaClient".  It's Python based and works natively within just about any Linux distribution you can think of, and can even be adapted to work in Windows.  However, if you're a systems administrator or work in IT operations as an "uptime czar" like me, you know just how convoluted the process can be of implementing native Linux tools within Windows.  That type of setup just doesn't fly for managing a PRODUCTION deployment.  You want to be able to use natively supported and functional tools, without the potential headache of having something fail because it wasn't meant for use within the Windows eco-system. Enter PowerClient.
+
+PowerClient is a Powershell based API client for Rackspace’s public cloud environment.  It is setup to work with Rackspace’s “Next Gen” servers, powered by Openstack.  The roadmap of this client is to port it for use with ANY Openstack environment, however, no timeframe has been established on this milestone yet.  
+
+This Powershell module utilizes standard function definitions, and can be added to as needed, if you want to enable your own custom cmdlets (please contribute as you see fit!).  Here is an example of one entire cmdlet, including it's help documentation:
 
 
 
@@ -89,7 +95,7 @@ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Images-d1e4427.html
 ```
 
 
-As with any 3rd party script, please use this module at your own risk.
+As with any 3rd party script/module, please use this module at your own risk, even though I have tested it against my own personal account many times.
 
 <h2>Prerequisites</h2>
 
@@ -115,7 +121,7 @@ As with any 3rd party script, please use this module at your own risk.
 
 The way this script is built as a Powershell module. Start by downloading as a ZIP file [HERE] (https://github.com/drmmarsunited/rackspacecloud_powershell/archive/master.zip). By default, PowerShell looks in the paths specified in the $env:PSModulePath environment variable when searching for available modules on a system. This contains two paths out of the box
 
-1.	<b>System Location</b>
+1.    <b>System Location</b>
     
     a.	 %windir%\System32\WindowsPowerShell\v1.0\Modules 
 
@@ -150,5 +156,5 @@ https://github.com/drmmarsunited/rackspacecloud_powershell/wiki
 
 
 
-<b>This is NOT a Rackspace sponsored project. I am a Solutions Engineer with Rackspace and am writing this script as a personal project and eventual contribution into OpenStack.</b>
+<b>This is NOT a fully Rackspace sponsored project. I am a Sales Engineer with Rackspace and am writing this module as a personal project and eventual contribution into OpenStack.</b>
 
