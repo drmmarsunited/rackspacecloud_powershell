@@ -155,8 +155,3 @@ https://github.com/drmmarsunited/rackspacecloud_powershell/wiki
 
 * Pro tip #1 - Maxmize your window and screen buffer sizes to get the most output possible in your Powershell window.
 * Pro tip #2 - Towards the top of the module, every command has an alias that is commented out.  You can uncomment these lines to make using this module even easier for yourself and other administrators.
-
-
-
-
-<b>This is NOT a fully Rackspace sponsored project. I am a Sales Engineer with Rackspace and am writing this module as a personal project and eventual contribution into OpenStack.</b>
