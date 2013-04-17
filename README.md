@@ -97,7 +97,9 @@ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Images-d1e4427.html
 
 As with any 3rd party script/module, please use this module at your own risk, even though I have tested it against my own personal account many times.
 
-<h2>Prerequisites</h2>
+<h2>Are there any prerequisites I need to run PowerClient?</h2>
+
+There are a few requirements to make sure that PowerClient runs smoothly for you on the PC/server of your choice:
 
 <b>Rackspace Cloud Account</b>
     
@@ -117,9 +119,9 @@ As with any 3rd party script/module, please use this module at your own risk, ev
 
 * This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" as a local/domain admin on your server. <b> Please note, if you have UAC enabled, you must run Powershell "as an administrator" to be able to manipulate execution policy.</b>
 
-<h2>How to Install</h2>
+<h2>How does PowerClient get installed?</h2>
 
-The way this script is built as a Powershell module. Start by downloading as a ZIP file [HERE] (https://github.com/drmmarsunited/rackspacecloud_powershell/archive/master.zip). By default, PowerShell looks in the paths specified in the $env:PSModulePath environment variable when searching for available modules on a system. This contains two paths out of the box
+The way this script is built is as a Powershell module. Start by downloading as a ZIP file [HERE] (https://github.com/drmmarsunited/rackspacecloud_powershell/archive/master.zip). By default, PowerShell looks in the paths specified in the $env:PSModulePath environment variable when searching for available modules on a system. This contains two paths out of the box
 
 1.    <b>System Location</b>
     
@@ -143,15 +145,16 @@ Set-Variable -Name CloudDDI -Value "" -Scope Global
 
 After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure. <b>It would also help you to extend your Powershell window and screen buffer size to the maximum your screen can support for easiest reading.</b>
 
-<h2>Additional Information / ProTips</h2>
+<h2>Are there any other sources for information or tips for PowerClient?</h2>
 
 Help for individual commands are built into the module and can be viewed by using normal Powershell cmdlets, for example "Get-Help Get-CloudServers".  To get more information, I will be maintaining a small wiki with supported command overviews, future work plans, and more help. It can be found here: 
 
 https://github.com/drmmarsunited/rackspacecloud_powershell/wiki 
 
-<h3>Protips!</h3>
+<h3>Pro tips!</h3>
 
-* Protip #1 - Maxmize your window and screen buffer sizes to get the most output possible in your Powershell window.
+* Pro tip #1 - Maxmize your window and screen buffer sizes to get the most output possible in your Powershell window.
+* Pro tip #2 - Towards the top of the module, every command has an alias that is commented out.  You can uncomment these lines to make using this module even easier for yourself and other administrators.
 
 
 
