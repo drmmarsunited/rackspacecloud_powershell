@@ -2,7 +2,7 @@
 
 <h2>Who am I and why should you use this client?</h2>
 
-Excellent questions, I am fan of due dilligence! My name is Mitch Robins and I approve this client.  All kidding aside, my name is actually Mitch Robins and I am a sales engineer in the SMB segement for Rackspace. The idea for this client was born out of utter frustration around the lack of cloud management tools available that were natively supported in Windows. Over the last 6 months, I have spent a large amount of personal time, and some Rackspace sponsored time, in getting this tool developed to specifically fill this gap and make life easier for Windows users.  Having 15+ years in the trenches with Windows (from desktop support to solutions architecture), this was the perfect opportunity to be able to contribute to the Windows community to help with cloud management and adoption.
+My name is Mitch Robins and I am currently a sales engineer in the SMB segement for Rackspace. Having 15+ years in the IT trenches with Windows (from desktop support to solutions architecture), this was the perfect opportunity to be able to contribute to the Windows community to help with cloud management and adoption. The idea for this client was born out of just that notion.  There was a need for a Windows native API client, and we were in a good position to create something to enable the community at large could use. Over the last few months, we've spent quite a bit of personal and Rackspace sponsored time in getting this tool developed to specifically fill this gap and make life easier for Windows users.  
 
 <h2>What is PowerClient?</h2>
 
@@ -123,7 +123,7 @@ The way this script is built as a Powershell module. Start by downloading as a Z
 
 1.    <b>System Location</b>
     
-    a.	 %windir%\System32\WindowsPowerShell\v1.0\Modules 
+    a.     %windir%\System32\WindowsPowerShell\v1.0\Modules 
 
 2.	<b>Currently logged on user location</b>
     
@@ -157,4 +157,3 @@ https://github.com/drmmarsunited/rackspacecloud_powershell/wiki
 
 
 <b>This is NOT a fully Rackspace sponsored project. I am a Sales Engineer with Rackspace and am writing this module as a personal project and eventual contribution into OpenStack.</b>
-
