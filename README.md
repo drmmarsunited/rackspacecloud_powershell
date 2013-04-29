@@ -102,6 +102,8 @@ As with any 3rd party script/module, please use this module at your own risk, ev
 There are a few requirements to make sure that PowerClient runs smoothly for you on the PC/server of your choice:
 
 <b>Rackspace Cloud Account</b>
+
+All of the fullowing information can be obtained from the [Rackspace Cloud Control Panel] (https://mycloud.rackspace.com/):
     
 * Username
     
@@ -117,7 +119,7 @@ There are a few requirements to make sure that PowerClient runs smoothly for you
  
 <b>Powershell Execution Policy</b>
 
-* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy Unrestricted" as a local/domain admin on your server. <b> Please note, if you have UAC enabled, you must run Powershell "as an administrator" to be able to manipulate execution policy.</b>
+* This script is not yet signed.  In order for this module to be properly imported, please run "Set-ExecutionPolicy RemoteSigned" (more secure) OR "Set-ExecutionPolicy Unrestricted", as a local/domain admin on your server. <b> Please note, if you have UAC enabled, you must run Powershell "as an administrator" to be able to manipulate execution policy.</b>
 
 <h2>How does PowerClient get installed?</h2>
 
