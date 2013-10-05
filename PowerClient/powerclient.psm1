@@ -5765,3 +5765,52 @@ else {
 
 #>
 }
+
+##CLOUD FILES BITS
+function Get-CloudFilesStatistics {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region
+        )
+    
+    Get-AuthToken
+
+    $rackspaceUrl = ""
+    foreach ($service in $token.access.serviceCatalog.service)
+    {
+        if ($service.name -eq "cloudFiles")
+        {
+            foreach ($endpoint in $service.endpoint)
+            {
+                if ($endpoint.region -eq $Region)
+                {
+                    $rackspaceUrl = $endpoint.publicURL
+                }
+            }
+        }
+    }
+    $resp = Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Head
+    $result = New-Object -TypeName PSObject
+    $result | Add-Member -MemberType NoteProperty -Name ObjectCount -Value ([int]$resp.Headers["X-Account-Object-Count"])
+    $result | Add-Member -MemberType NoteProperty -Name BytesUsed -Value ([long]$resp.Headers["X-Account-Bytes-Used"])
+    $result | Add-Member -MemberType NoteProperty -Name ContainerCount -Value ([int]$resp.Headers["X-Account-Container-Count"])
+    return $result
+<#
+ .SYNOPSIS
+ The Get-CloudFilesStatistics cmdlet will return statistical information for all of your objects stored on Cloud Files in a given region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesStatistics -Region ord
+ This example shows how to query the ORD region for the cloud files statistics.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/View_Account_Details-d1e108.html
+
+#>
+}
