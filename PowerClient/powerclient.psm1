@@ -5767,10 +5767,12 @@ else {
 }
 
 ##CLOUD FILES BITS
-function Get-CloudFilesStatistics {
+function Get-CloudFilesEndpointForRegion {
     Param(
         [Parameter(Position=0,Mandatory=$true)]
-        [string]$Region
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl
         )
     
     Get-AuthToken
@@ -5784,11 +5786,53 @@ function Get-CloudFilesStatistics {
             {
                 if ($endpoint.region -eq $Region)
                 {
-                    $rackspaceUrl = $endpoint.publicURL
+                    if ($GetInternalUrl)
+                    {
+                        $rackspaceUrl = $endpoint.internalURL
+                    }
+                    else
+                    {
+                        $rackspaceUrl = $endpoint.publicURL
+                    }
                 }
             }
         }
     }
+    return $rackspaceUrl
+<#
+ .SYNOPSIS
+ The Get-CloudFilesEndpointForRegion cmdlet will return the specified URL for your Cloud File account.  This URL will be used for all REST based requests.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesEndpointForRegion -Region ord -GetInternalUrl $False
+ This example shows how to get your ORD region's public URL for cloud files.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Authentication-d1e639.html
+
+#>
+}
+
+function Get-CloudFilesStatistics {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl
+        )
+    
+    Get-AuthToken
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
     $resp = Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Head
     $result = New-Object -TypeName PSObject
     $result | Add-Member -MemberType NoteProperty -Name ObjectCount -Value ([int]$resp.Headers["X-Account-Object-Count"])
@@ -5804,13 +5848,163 @@ function Get-CloudFilesStatistics {
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudFilesStatistics -Region ord
- This example shows how to query the ORD region for the cloud files statistics.
+ PS C:\Users\Administrator> Get-CloudFilesStatistics -Region ord -GetInternalUrl $False
+ This example shows how to query the ORD region through Rackspace's public interface for the cloud files statistics.
 
  .LINK
  http://docs.rackspace.com/files/api/v1/cf-devguide/content/View_Account_Details-d1e108.html
+
+#>
+}
+
+function Get-CloudFilesContainerList {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl
+        )
+    
+    Get-AuthToken
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "?format=json"
+    $resp = Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
+    return $resp
+<#
+ .SYNOPSIS
+ The Get-CloudFilesContainerList cmdlet will return statistical information for each of your containers in the Cloud Files in a given region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesContainerList -Region ord -GetInternalUrl $False
+ This example shows how to query the ORD region through Rackspace's public interface for the cloud files containers.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/List_containers-d1e121.html
+
+#>
+}
+
+function Get-CloudFilesContainerListContaining {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [string]$ContainsString,
+        [Parameter(Position=2,Mandatory=$true)]
+        [switch]$GetInternalUrl
+        )
+
+    $containers = Get-CloudFilesContainerList $Region $GetInternalUrl
+    $resp = @()
+    foreach ($container in $containers)
+    {
+        if ($container.name.ToLower().Contains($ContainsString))
+        {
+            $resp += $container
+        }
+    }
+    return $resp
+<#
+ .SYNOPSIS
+ The Get-CloudFilesContainerListContaining cmdlet will return statistical information for each of your containers in the Cloud Files in a given region
+ that contains the text passed in the parameter $ContainsString
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER ContainsString
+ Use this parameter to filter the containers to only return the containers that contain this string. This is case insensitive.
+
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesContainerListContaining -Region ord -ContainsString "movies" -GetInternalUrl $False
+ This example shows how to query the ORD region through Rackspace's public interface for the cloud files containers.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/List_containers-d1e121.html
+
+#>
+}
+
+function Get-CloudFilesObjectList {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName,
+        [Parameter(Position=3,Mandatory=$false)]
+        [string]$Delimiter,
+        [Parameter(Position=4,Mandatory=$false)]
+        [string]$Prefix
+        )
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName + "?format=json"
+    if (($Delimiter.Length -gt 0) -or ($Prefix.Length -gt 0))
+    {
+        if ($Delimiter.Length -gt 0)
+        {
+            $rackspaceUrl += "&delimiter=" + $Delimiter
+        }
+        if ($Prefix.Length -gt 0)
+        {
+            $rackspaceUrl += "&prefix=" + $Prefix
+        }
+    }
+    
+    $resp = Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
+    return $resp
+ <#
+ .SYNOPSIS
+ The Get-CloudFilesObjectList cmdlet will return a list of objects with the properties of hash, last_modified, bytes, name, and content_type for each object
+ in the container specified by $ContainerName and satisfying the $Delimiter and the $Prefix requirements.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container containing the objects you wish to list.
+ 
+ .PARAMETER Delimiter
+ Use this parameter to indicate the character that is your delimiter so that a "directory" behaves as a container.
+
+ .PARAMETER Prefix
+ Use this parameter to filter out all objects that do not begin with the value passed in the $Prefix.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesObjectList -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to query the ORD region through Rackspace's public interface for the list of objects in the cloud files container named "movies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Pseudo-Hierarchical_Folders_Directories-d1e1580.html
 
 #>
 }
