@@ -6008,3 +6008,52 @@ function Get-CloudFilesObjectList {
 
 #>
 }
+
+function Get-DoesCloudFilesContainerExist {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName
+        )
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName
+    
+    Try
+    {
+        $resp = Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Head
+        return ($resp.StatusCode -eq 204)
+    }
+    Catch [system.exception]
+    {
+        return $False
+    }
+<#
+ .SYNOPSIS
+ The Get-DoesCloudFilesContainerExist cmdlet will return $True if the container name exists or $False if the container name does not exist.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container you wish to verify exists.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-DoesCloudFilesContainerExist -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to query the ORD region through Rackspace's public interface for the existence of the cloud files container named "movies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/View-Container_Info-d1e1285.html
+
+#>
+}
