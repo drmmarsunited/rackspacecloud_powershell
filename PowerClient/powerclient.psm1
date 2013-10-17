@@ -5767,6 +5767,23 @@ else {
 }
 
 ##CLOUD FILES BITS
+function UrlEncode {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$toEncode
+        )
+    return [System.Web.HttpUtility]::UrlEncode($toEncode)
+}
+
+function Clone-Object {
+    param($DeepCopyObject)
+    $memStream = new-object IO.MemoryStream
+    $formatter = new-object Runtime.Serialization.Formatters.Binary.BinaryFormatter
+    $formatter.Serialize($memStream,$DeepCopyObject)
+    $memStream.Position=0
+    $formatter.Deserialize($memStream)
+}
+
 function Get-CloudFilesEndpointForRegion {
     Param(
         [Parameter(Position=0,Mandatory=$true)]
@@ -5874,8 +5891,23 @@ function Get-CloudFilesContainerList {
 
     $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
     $rackspaceUrl += "?format=json"
-    $resp = Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
-    return $resp
+    $response = @()
+    $currentResponse = @()
+    $markerUrl = ""
+    do {
+        if ($currentResponse.Length -eq 10000)
+        {
+            $markerUrl = $rackspaceUrl + "&marker=" + (UrlEncode $currentResponse[9999].name)
+        }
+        else
+        {
+            $markerUrl = $rackspaceUrl
+        }
+        $currentResponse = Invoke-RestMethod -Uri $markerUrl -Headers $HeaderDictionary -Method Get
+        $response += $currentResponse
+    } until ($currentResponse.Length -lt 10000)
+
+    return $response
 <#
  .SYNOPSIS
  The Get-CloudFilesContainerList cmdlet will return statistical information for each of your containers in the Cloud Files in a given region.
@@ -5904,9 +5936,9 @@ function Get-CloudFilesContainerListContaining {
         [Parameter(Position=0,Mandatory=$true)]
         [string]$Region,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$ContainsString,
+        [switch]$GetInternalUrl,
         [Parameter(Position=2,Mandatory=$true)]
-        [switch]$GetInternalUrl
+        [string]$ContainsString
         )
 
     $containers = Get-CloudFilesContainerList $Region $GetInternalUrl
@@ -6057,3 +6089,103 @@ function Get-DoesCloudFilesContainerExist {
 
 #>
 }
+
+function Add-CloudFilesContainer {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName
+
+    (Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Put)
+}
+
+function Remove-CloudFilesContainer {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName
+
+    Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Delete
+}
+
+function Get-CloudFilesObject {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$ObjectName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName + "/" + $ObjectName
+
+    return Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
+}
+
+function Remove-CloudFilesObject {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$ObjectName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName + "/" + $ObjectName
+    
+    Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Delete
+}
+
+function Copy-CloudFilesObject {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$SourceContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$SourceObjectName,
+        [Parameter(Position=4,Mandatory=$true)]
+        [string]$DestinationContainerName,
+        [Parameter(Position=5,Mandatory=$true)]
+        [string]$DestinationObjectName
+        )
+    
+    $destinationPath = "/" + $DestinationContainerName + "/" + $DestinationObjectName
+    $sourcePath = "/" + $SourceContainerName + "/" + $SourceObjectName
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceSourceUrl = $rackspaceUrl + $sourcePath
+
+    $webRequest = [System.Net.WebRequest]::Create( $rackspaceSourceUrl )
+    $webRequest.PreAuthenticate = $true
+    $webRequest.Method = "COPY"
+    $webRequest.Headers.Add("Destination", $destinationPath)
+    $webRequest.Headers.Add("X-Auth-Token", $HeaderDictionary["X-Auth-Token"])
+    $resp = $webRequest.GetResponse()
+
+    return $resp
+}
+
