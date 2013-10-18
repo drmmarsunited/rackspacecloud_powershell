@@ -5767,10 +5767,35 @@ else {
 }
 
 ##CLOUD FILES BITS
-function Get-CloudFilesStatistics {
+function UrlEncode {
     Param(
         [Parameter(Position=0,Mandatory=$true)]
-        [string]$Region
+        [string]$toEncode
+        )
+    return [System.Web.HttpUtility]::UrlEncode($toEncode)
+<#
+ .SYNOPSIS
+ URL Encodes the string passed in.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER toEncode
+ This is the string that will be URL Encoded and returned.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> UrlEncode -toEncode "foo<ness"
+ This example shows how to url encode the string foo<ness.  The response is foo%3cness.
+
+#>
+}
+
+function Get-CloudFilesEndpointForRegion {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl
         )
     
     Get-AuthToken
@@ -5784,11 +5809,53 @@ function Get-CloudFilesStatistics {
             {
                 if ($endpoint.region -eq $Region)
                 {
-                    $rackspaceUrl = $endpoint.publicURL
+                    if ($GetInternalUrl)
+                    {
+                        $rackspaceUrl = $endpoint.internalURL
+                    }
+                    else
+                    {
+                        $rackspaceUrl = $endpoint.publicURL
+                    }
                 }
             }
         }
     }
+    return $rackspaceUrl
+<#
+ .SYNOPSIS
+ The Get-CloudFilesEndpointForRegion cmdlet will return the specified URL for your Cloud File account.  This URL can be used for Rackspace REST based requests.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesEndpointForRegion -Region ord -GetInternalUrl $False
+ This example shows how to get your ORD region's public URL for cloud files.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Authentication-d1e639.html
+
+#>
+}
+
+function Get-CloudFilesStatistics {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl
+        )
+    
+    Get-AuthToken
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
     $resp = Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Head
     $result = New-Object -TypeName PSObject
     $result | Add-Member -MemberType NoteProperty -Name ObjectCount -Value ([int]$resp.Headers["X-Account-Object-Count"])
@@ -5804,13 +5871,523 @@ function Get-CloudFilesStatistics {
 
  .PARAMETER Region
  Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
 
  .EXAMPLE
- PS C:\Users\Administrator> Get-CloudFilesStatistics -Region ord
- This example shows how to query the ORD region for the cloud files statistics.
+ PS C:\Users\Administrator> Get-CloudFilesStatistics -Region ord -GetInternalUrl $False
+ This example shows how to query the ORD region through Rackspace's public interface for the cloud files statistics.
 
  .LINK
  http://docs.rackspace.com/files/api/v1/cf-devguide/content/View_Account_Details-d1e108.html
+
+#>
+}
+
+function Get-CloudFilesContainerList {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl
+        )
+    
+    Get-AuthToken
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "?format=json"
+    $response = @()
+    $currentResponse = @()
+    $markerUrl = ""
+    do {
+        if ($currentResponse.Length -eq 10000)
+        {
+            $markerUrl = $rackspaceUrl + "&marker=" + (UrlEncode $currentResponse[9999].name)
+        }
+        else
+        {
+            $markerUrl = $rackspaceUrl
+        }
+        $currentResponse = Invoke-RestMethod -Uri $markerUrl -Headers $HeaderDictionary -Method Get
+        $response += $currentResponse
+    } until ($currentResponse.Length -lt 10000)
+
+    return $response
+<#
+ .SYNOPSIS
+ The Get-CloudFilesContainerList cmdlet will return statistical information for each of your containers in the Cloud Files in a given region.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesContainerList -Region ord -GetInternalUrl $False
+ This example shows how to query the ORD region through Rackspace's public interface for the cloud files containers.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/List_containers-d1e121.html
+
+#>
+}
+
+function Get-CloudFilesContainerListContaining {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainsString
+        )
+
+    $containers = Get-CloudFilesContainerList $Region $GetInternalUrl
+    $resp = @()
+    foreach ($container in $containers)
+    {
+        if ($container.name.ToLower().Contains($ContainsString))
+        {
+            $resp += $container
+        }
+    }
+    return $resp
+<#
+ .SYNOPSIS
+ The Get-CloudFilesContainerListContaining cmdlet will return statistical information for each of your containers in the Cloud Files in a given region
+ that contains the text passed in the parameter $ContainsString
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER ContainsString
+ Use this parameter to filter the containers to only return the containers that contain this string. This is case insensitive.
+
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesContainerListContaining -Region ord -ContainsString "movies" -GetInternalUrl $False
+ This example shows how to query the ORD region through Rackspace's public interface for the cloud files containers.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/List_containers-d1e121.html
+
+#>
+}
+
+function Get-CloudFilesObjectList {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName,
+        [Parameter(Position=3,Mandatory=$false)]
+        [string]$Delimiter,
+        [Parameter(Position=4,Mandatory=$false)]
+        [string]$Prefix
+        )
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName + "?format=json"
+    if (($Delimiter.Length -gt 0) -or ($Prefix.Length -gt 0))
+    {
+        if ($Delimiter.Length -gt 0)
+        {
+            $rackspaceUrl += "&delimiter=" + $Delimiter
+        }
+        if ($Prefix.Length -gt 0)
+        {
+            $rackspaceUrl += "&prefix=" + $Prefix
+        }
+    }
+    
+    $resp = Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
+    return $resp
+ <#
+ .SYNOPSIS
+ The Get-CloudFilesObjectList cmdlet will return a list of objects with the properties of hash, last_modified, bytes, name, and content_type for each object
+ in the container specified by $ContainerName and satisfying the $Delimiter and the $Prefix requirements.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container containing the objects you wish to list.
+ 
+ .PARAMETER Delimiter
+ Use this parameter to indicate the character that is your delimiter so that a "directory" behaves as a container.
+
+ .PARAMETER Prefix
+ Use this parameter to filter out all objects that do not begin with the value passed in the $Prefix.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesObjectList -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to query the ORD region through Rackspace's public interface for the list of objects in the cloud files container named "movies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Pseudo-Hierarchical_Folders_Directories-d1e1580.html
+
+#>
+}
+
+function Get-DoesCloudFilesContainerExist {
+
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName
+        )
+
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName
+    
+    Try
+    {
+        $resp = Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Head
+        return ($resp.StatusCode -eq 204)
+    }
+    Catch [system.exception]
+    {
+        return $False
+    }
+<#
+ .SYNOPSIS
+ The Get-DoesCloudFilesContainerExist cmdlet will return $True if the container name exists or $False if the container name does not exist.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container you wish to verify exists.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-DoesCloudFilesContainerExist -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to query the ORD region through Rackspace's public interface for the existence of the cloud files container named "movies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/View-Container_Info-d1e1285.html
+
+#>
+}
+
+function Add-CloudFilesContainer {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName
+
+    (Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Put)
+<#
+ .SYNOPSIS
+ The Add-CloudFilesContainer cmdlet will create a new empty container.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container you wish to create.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudFilesContainer -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to create a new container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Create_Container-d1e1694.html
+
+#>
+}
+
+function Remove-CloudFilesContainer {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName
+
+    Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Delete
+<#
+ .SYNOPSIS
+ The Remove-CloudFilesContainer cmdlet will attempt to delete a container. The container must be empty.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container you wish to delete.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudFilesContainer -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to delete a container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Delete_Container-d1e1765.html
+
+#>
+}
+
+function Get-CloudFilesObject {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$ObjectName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName + "/" + $ObjectName
+
+    return Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
+<#
+ .SYNOPSIS
+ The Get-CloudFilesObject cmdlet will attempt to download the contents of the cloud files object.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container the object is in.
+
+ .PARAMETER ObjectName
+ Use this parameter to indicate the name of the object you wish to acquire.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesObject -Region ord -GetInternalUrl $False -ContainerName "movies" -ObjectName "TopGun.avi"
+ This example shows how to download a file named "TopGun.avi" from a container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Retrieve_Object-d1e4301.html
+
+#>
+}
+
+function Remove-CloudFilesObject {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$ContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$ObjectName
+        )
+    
+    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    $rackspaceUrl += "/" + $ContainerName + "/" + $ObjectName
+    
+    Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Delete
+<#
+ .SYNOPSIS
+ The Remove-CloudFilesObject cmdlet will attempt to delete the cloud files object.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container the object is in.
+
+ .PARAMETER ObjectName
+ Use this parameter to indicate the name of the object you wish to delete.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudFilesObject -Region ord -GetInternalUrl $False -ContainerName "movies" -ObjectName "TopGun.avi"
+ This example shows how to delete a file named "TopGun.avi" from a container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Retrieve_Object-d1e4301.html
+
+#>
+}
+
+function Copy-CloudFilesObject {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$SourceContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$SourceObjectName,
+        [Parameter(Position=4,Mandatory=$true)]
+        [string]$DestinationContainerName,
+        [Parameter(Position=5,Mandatory=$true)]
+        [string]$DestinationObjectName,
+        [Parameter(Position=6,Mandatory=$false)]
+        [string]$RackspaceUrl
+        )
+    
+    $destinationPath = "/" + $DestinationContainerName + "/" + $DestinationObjectName
+    $sourcePath = "/" + $SourceContainerName + "/" + $SourceObjectName
+    if ($RackspaceUrl.Length -lt 1)
+    {
+        $RackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    }
+    $rackspaceSourceUrl = $RackspaceUrl + $sourcePath
+
+    $webRequest = [System.Net.WebRequest]::Create( $rackspaceSourceUrl )
+    $webRequest.PreAuthenticate = $true
+    $webRequest.Method = "COPY"
+    $webRequest.Headers.Add("Destination", $destinationPath)
+    $webRequest.Headers.Add("X-Auth-Token", $HeaderDictionary["X-Auth-Token"])
+    $resp = $webRequest.GetResponse()
+
+    return $resp
+<#
+ .SYNOPSIS
+ The Copy-CloudFilesObject cmdlet will attempt to copy the cloud files object.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER SourceContainerName
+ Use this parameter to indicate the container the source object is in.
+
+ .PARAMETER SourceObjectName
+ Use this parameter to indicate the name of the object you wish to copy.
+
+ .PARAMETER DestinationContainerName
+ Use this parameter to indicate the destination's container.
+
+ .PARAMETER DestinationObjectName
+ Use this parameter to indicate the name of the object you wish to copy to.
+
+ .PARAMETER RackspaceUrl
+ Use this parameter to indicate the base URL to use when communicating with Rackspace. This is to prevent a possibly unnecessary call to Rackspace for URL information if it's already available.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Copy-CloudFilesObject -Region ord -GetInternalUrl $False -SourceContainerName "movies" -SourceObjectName "TopGun.avi" -DestinationContainerName "Top5Movies" -DestinationObjectName "Number1.avi"
+ This example shows how to copy a file named "TopGun.avi" from a container named "movies" in the ORD region through Rackspace's public interface to an object named "Number1.avi" in a container named "Top5Movies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Copy_Object-d1e2241.html
+
+#>
+}
+
+function Copy-CloudFilesContainer {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$SourceContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$DestinationContainerName
+        )
+
+    $url = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+
+    $sourceObjects = Get-CloudFilesObjectList $Region $GetInternalUrl -ContainerName $SourceContainerName
+
+    if (!(Get-DoesCloudFilesContainerExist $Region $GetInternalUrl $DestinationContainerName))
+    {
+        Add-CloudFilesContainer $Region $GetInternalUrl $DestinationContainerName
+    }
+
+    foreach ($sourceObject in $sourceObjects)
+    {
+        Copy-CloudFilesObject $Region $GetInternalUrl $SourceContainerName $sourceObject.name $DestinationContainerName $sourceObject.name $url
+    }
+<#
+ .SYNOPSIS
+ The Copy-CloudFilesContainer cmdlet will attempt to copy all cloud files object in a container to another container. All metadata and object names are preserved.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER SourceContainerName
+ Use this parameter to indicate the container the source objects are in.
+
+ .PARAMETER DestinationContainerName
+ Use this parameter to indicate the destination container.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Copy-CloudFilesContainer -Region ord -GetInternalUrl $False -SourceContainerName "movies" "TopGun.avi" -DestinationContainerName "AllMovies"
+ This example shows how to copy all objects from a container named "movies" in the ORD region through Rackspace's public interface to a container named "AllMovies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Copy_Object-d1e2241.html
 
 #>
 }
