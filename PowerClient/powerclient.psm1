@@ -5773,15 +5773,21 @@ function UrlEncode {
         [string]$toEncode
         )
     return [System.Web.HttpUtility]::UrlEncode($toEncode)
-}
+<#
+ .SYNOPSIS
+ URL Encodes the string passed in.
 
-function Copy-Object {
-    param($DeepCopyObject)
-    $memStream = new-object IO.MemoryStream
-    $formatter = new-object Runtime.Serialization.Formatters.Binary.BinaryFormatter
-    $formatter.Serialize($memStream,$DeepCopyObject)
-    $memStream.Position=0
-    $formatter.Deserialize($memStream)
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER toEncode
+ This is the string that will be URL Encoded and returned.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> UrlEncode -toEncode "foo<ness"
+ This example shows how to url encode the string foo<ness.  The response is foo%3cness.
+
+#>
 }
 
 function Get-CloudFilesEndpointForRegion {
