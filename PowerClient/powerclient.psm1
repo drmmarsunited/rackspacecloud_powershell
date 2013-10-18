@@ -5824,7 +5824,7 @@ function Get-CloudFilesEndpointForRegion {
     return $rackspaceUrl
 <#
  .SYNOPSIS
- The Get-CloudFilesEndpointForRegion cmdlet will return the specified URL for your Cloud File account.  This URL will be used for all REST based requests.
+ The Get-CloudFilesEndpointForRegion cmdlet will return the specified URL for your Cloud File account.  This URL can be used for Rackspace REST based requests.
 
  .DESCRIPTION
  See synopsis.
