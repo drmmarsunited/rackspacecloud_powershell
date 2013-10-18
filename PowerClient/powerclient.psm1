@@ -5775,7 +5775,7 @@ function UrlEncode {
     return [System.Web.HttpUtility]::UrlEncode($toEncode)
 }
 
-function Clone-Object {
+function Copy-Object {
     param($DeepCopyObject)
     $memStream = new-object IO.MemoryStream
     $formatter = new-object Runtime.Serialization.Formatters.Binary.BinaryFormatter
@@ -6104,6 +6104,30 @@ function Add-CloudFilesContainer {
     $rackspaceUrl += "/" + $ContainerName
 
     (Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Put)
+<#
+ .SYNOPSIS
+ The Add-CloudFilesContainer cmdlet will create a new empty container.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container you wish to create.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Add-CloudFilesContainer -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to create a new container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Create_Container-d1e1694.html
+
+#>
 }
 
 function Remove-CloudFilesContainer {
@@ -6120,6 +6144,30 @@ function Remove-CloudFilesContainer {
     $rackspaceUrl += "/" + $ContainerName
 
     Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Delete
+<#
+ .SYNOPSIS
+ The Remove-CloudFilesContainer cmdlet will attempt to delete a container. The container must be empty.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container you wish to delete.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudFilesContainer -Region ord -GetInternalUrl $False -ContainerName "movies"
+ This example shows how to delete a container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Delete_Container-d1e1765.html
+
+#>
 }
 
 function Get-CloudFilesObject {
@@ -6138,6 +6186,33 @@ function Get-CloudFilesObject {
     $rackspaceUrl += "/" + $ContainerName + "/" + $ObjectName
 
     return Invoke-RestMethod -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Get
+<#
+ .SYNOPSIS
+ The Get-CloudFilesObject cmdlet will attempt to download the contents of the cloud files object.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container the object is in.
+
+ .PARAMETER ObjectName
+ Use this parameter to indicate the name of the object you wish to acquire.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudFilesObject -Region ord -GetInternalUrl $False -ContainerName "movies" -ObjectName "TopGun.avi"
+ This example shows how to download a file named "TopGun.avi" from a container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Retrieve_Object-d1e4301.html
+
+#>
 }
 
 function Remove-CloudFilesObject {
@@ -6156,6 +6231,33 @@ function Remove-CloudFilesObject {
     $rackspaceUrl += "/" + $ContainerName + "/" + $ObjectName
     
     Invoke-WebRequest -Uri $rackspaceUrl -Headers $HeaderDictionary -Method Delete
+<#
+ .SYNOPSIS
+ The Remove-CloudFilesObject cmdlet will attempt to delete the cloud files object.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER ContainerName
+ Use this parameter to indicate the container the object is in.
+
+ .PARAMETER ObjectName
+ Use this parameter to indicate the name of the object you wish to delete.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Remove-CloudFilesObject -Region ord -GetInternalUrl $False -ContainerName "movies" -ObjectName "TopGun.avi"
+ This example shows how to delete a file named "TopGun.avi" from a container named "movies" in the ORD region through Rackspace's public interface.
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Retrieve_Object-d1e4301.html
+
+#>
 }
 
 function Copy-CloudFilesObject {
@@ -6171,13 +6273,18 @@ function Copy-CloudFilesObject {
         [Parameter(Position=4,Mandatory=$true)]
         [string]$DestinationContainerName,
         [Parameter(Position=5,Mandatory=$true)]
-        [string]$DestinationObjectName
+        [string]$DestinationObjectName,
+        [Parameter(Position=6,Mandatory=$false)]
+        [string]$RackspaceUrl
         )
     
     $destinationPath = "/" + $DestinationContainerName + "/" + $DestinationObjectName
     $sourcePath = "/" + $SourceContainerName + "/" + $SourceObjectName
-    $rackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
-    $rackspaceSourceUrl = $rackspaceUrl + $sourcePath
+    if ($RackspaceUrl.Length -lt 1)
+    {
+        $RackspaceUrl = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+    }
+    $rackspaceSourceUrl = $RackspaceUrl + $sourcePath
 
     $webRequest = [System.Net.WebRequest]::Create( $rackspaceSourceUrl )
     $webRequest.PreAuthenticate = $true
@@ -6187,5 +6294,94 @@ function Copy-CloudFilesObject {
     $resp = $webRequest.GetResponse()
 
     return $resp
+<#
+ .SYNOPSIS
+ The Copy-CloudFilesObject cmdlet will attempt to copy the cloud files object.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER SourceContainerName
+ Use this parameter to indicate the container the source object is in.
+
+ .PARAMETER SourceObjectName
+ Use this parameter to indicate the name of the object you wish to copy.
+
+ .PARAMETER DestinationContainerName
+ Use this parameter to indicate the destination's container.
+
+ .PARAMETER DestinationObjectName
+ Use this parameter to indicate the name of the object you wish to copy to.
+
+ .PARAMETER RackspaceUrl
+ Use this parameter to indicate the base URL to use when communicating with Rackspace. This is to prevent a possibly unnecessary call to Rackspace for URL information if it's already available.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Copy-CloudFilesObject -Region ord -GetInternalUrl $False -SourceContainerName "movies" -SourceObjectName "TopGun.avi" -DestinationContainerName "Top5Movies" -DestinationObjectName "Number1.avi"
+ This example shows how to copy a file named "TopGun.avi" from a container named "movies" in the ORD region through Rackspace's public interface to an object named "Number1.avi" in a container named "Top5Movies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Copy_Object-d1e2241.html
+
+#>
 }
 
+function Copy-CloudFilesContainer {
+    Param(
+        [Parameter(Position=0,Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Position=1,Mandatory=$true)]
+        [switch]$GetInternalUrl,
+        [Parameter(Position=2,Mandatory=$true)]
+        [string]$SourceContainerName,
+        [Parameter(Position=3,Mandatory=$true)]
+        [string]$DestinationContainerName
+        )
+
+    $url = Get-CloudFilesEndpointForRegion $Region $GetInternalUrl
+
+    $sourceObjects = Get-CloudFilesObjectList $Region $GetInternalUrl -ContainerName $SourceContainerName
+
+    if (!(Get-DoesCloudFilesContainerExist $Region $GetInternalUrl $DestinationContainerName))
+    {
+        Add-CloudFilesContainer $Region $GetInternalUrl $DestinationContainerName
+    }
+
+    foreach ($sourceObject in $sourceObjects)
+    {
+        Copy-CloudFilesObject $Region $GetInternalUrl $SourceContainerName $sourceObject.name $DestinationContainerName $sourceObject.name $url
+    }
+<#
+ .SYNOPSIS
+ The Copy-CloudFilesContainer cmdlet will attempt to copy all cloud files object in a container to another container. All metadata and object names are preserved.
+
+ .DESCRIPTION
+ See synopsis.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.  Valid choices are "DFW" or "ORD" (without the quotes).
+ 
+ .PARAMETER GetInternalUrl
+ Use this parameter to indicate whether the URL returned should be the publically accessible URL or the Rackspace internal URL to possibly save on usage costs.
+
+ .PARAMETER SourceContainerName
+ Use this parameter to indicate the container the source objects are in.
+
+ .PARAMETER DestinationContainerName
+ Use this parameter to indicate the destination container.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Copy-CloudFilesContainer -Region ord -GetInternalUrl $False -SourceContainerName "movies" "TopGun.avi" -DestinationContainerName "AllMovies"
+ This example shows how to copy all objects from a container named "movies" in the ORD region through Rackspace's public interface to a container named "AllMovies".
+
+ .LINK
+ http://docs.rackspace.com/files/api/v1/cf-devguide/content/Copy_Object-d1e2241.html
+
+#>
+}
