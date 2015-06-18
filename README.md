@@ -1,5 +1,17 @@
 <h1>PowerClient - Rackspace Cloud API Powershell Client</h1>
 
+<h2> CRITICAL UPDATE</h2>
+
+On July 19th, Rackspace (in following with OpenStack developments) will disable all XML support within it's cloud API(s).  At the moment, I do not have the time required to update this client to completely use JSON for all of its requests/responses.  I am asking for help with this effort from the community at large, if any of you can spare the time.
+
+If not, there is another PowerShell client called "PoshStack" that can be downloaded from here:
+
+[PoshStack] (https://github.com/DonSchenck/PoshStack)
+
+Further information on PoshStack can be found here:
+
+[PoshStack Dev Blog] (https://developer.rackspace.com/blog/Introducing-PoshStack-the-PowerShell-client-for-OpenStack/)
+
 <h2>Who am I and why should you use this client?</h2>
 
 My name is Mitch Robins and I am currently a sales engineer in the SMB segement for Rackspace. Having 15+ years in the IT trenches with Windows (from desktop support to solutions architecture), this was the perfect opportunity to be able to contribute to the Windows community to help with cloud management and adoption. The idea for this client was born out of just that notion.  There was a need for a Windows native API client, and we were in a good position to create something to enable the community at large could use. Over the last few months, we've spent quite a bit of personal and Rackspace sponsored time in getting this tool developed to specifically fill this gap and make life easier for Windows users.  
