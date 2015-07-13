@@ -7,21 +7,21 @@ Set-Variable -Name identityURI -Scope Script -Value 'https://identity.api.racksp
 Set-Variable -Name authBody -Scope Script -Value "{{`"auth`":{{`"RAX-KSKEY:apiKeyCredentials`":{{`"username`":`"{0}`", `"apiKey`":`"{1}`"}}}}}}"
 
 
-function Get-IdentityURI {
-    return $script:identityURI
-<#
-    .SYNOPSIS
-    Returns the URI used for Authentication with Rackspace
-#>
-}
-
-function Get-IdentityAuthBody {
+function Get-ProviderAuthBody {
     $private:result = [string]::Format($script:authBody, (Get-CloudUsername), (Get-CloudAPIKey))
     Write-Verbose "Using auth body of: $result"
     return $result
 <#
     .SYNOPSIS
     Returns the a JSON body to use for authentication.
+#>
+}
+
+function Get-ProviderURI {
+    return $script:identityURI
+<#
+    .SYNOPSIS
+    Returns the URI used for Authentication with Rackspace
 #>
 }
 

@@ -6,23 +6,23 @@
 Set-Variable -Name identityURI -Scope Script -Value $null   # URL for the identity endpoint.
 Set-Variable -Name authBody -Scope Script -Value $null      # JSON body to perform auth request.
 
-function Get-IdentityURI {
-    
-    throw [System.NotImplementedException] "The function is not implemented for default provider."
+function Get-ProviderAuthBody {
 
-<#
-    .SYNOPSIS
-    Returns the URI used for Authentication with Rackspace
-#>
-}
-
-function Get-IdentityAuthBody {
-    
     throw [System.NotImplementedException] "The function is not implemented for default provider."
 
 <#
     .SYNOPSIS
     Returns the a JSON body to use for authentication.
+#>
+}
+
+function Get-ProviderURI {
+
+    throw [System.NotImplementedException] "The function is not implemented for default provider."
+
+<#
+    .SYNOPSIS
+    Returns the URI used for Authentication with Rackspace
 #>
 }
 

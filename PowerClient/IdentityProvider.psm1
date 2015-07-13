@@ -15,8 +15,8 @@ Set-Variable -Name OpenStackProvider -Scope Script -Value $null
 #-------------------------------------------------------------------------------------------
 
 
-function Get-AuthBody {
-    return (Get-IdentityAuthBody)
+function Get-IdentityAuthBody {
+    return (Get-ProviderAuthBody)
 
 <#
     .SYNOPSIS
@@ -28,8 +28,8 @@ function Get-AuthBody {
 #>
 }
 
-function Get-AuthURI {
-    return (Get-IdentityURI)
+function Get-IdentityAuthURI {
+    return (Get-ProviderURI)
 
 <#
 
