@@ -28,7 +28,7 @@ $ImageListTable = @{Expression={$_.id};Label="Image ID";width=38},
 $ServerListTable = @{Expression={$_.id};Label="Server ID";width=38}, 
 @{Expression={$_.Name};Label="Server Name";width=40}, 
 @{Expression={$_.Status};Label="Server Status";width=15}, 
-@{Expression={$_.addresses.network.ip.addr};Label="Server IP Addresses";width=200}
+@{Expression={$_.addresses.public.addr};Label="Server IP Addresses";width=200}
 
 $NetworkListTable = @{Expression={$_.label};Label="Network Name";width=25}, 
 @{Expression={$_.cidr};Label="Assigned Block";width=30}, 
@@ -193,7 +193,22 @@ Set-Alias -Name rclbcl -Value Remove-ConnectionLogging
 Set-Alias -Name rclbct -Value Remove-ConnectionThrottling
 #>
 
-## Define Functions
+## DEFINE FUNCTIONS
+
+## Global API Call
+function Get-APIRequest {
+    Param(
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $URI
+        )
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Method Get
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
+ 
 
 ## Region mismatch 
 function Send-RegionError {
@@ -247,7 +262,7 @@ function Get-CloudServerImages {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail.xml"
+	Set-Variable -Name RegionImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region){
@@ -256,11 +271,10 @@ if ($RegionList -contains $Region){
     Get-AuthToken
 
     ## Making the call to the API for a list of available server images and storing data into a variable
-    [xml]$ServerImageListRegionStep0 = (Invoke-RestMethod -Uri $RegionImageURI  -Headers $HeaderDictionary)
-    [xml]$ServerImageListRegionFinal = ($ServerImageListRegionStep0.innerxml)
+    Get-APIRequest $RegionImageURI
 
-    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-    $ServerImageListRegionFinal.Images.Image | Sort-Object Name | ft $ImageListTable -AutoSize
+    ## Use dot notation to show the information needed without further parsing.
+    $Response.Images | Sort-Object Name | ft $ImageListTable -AutoSize
     }
 
 else {
@@ -312,7 +326,7 @@ function Get-CloudServers{
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail.xml"
+	Set-Variable -Name RegionServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -321,11 +335,10 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available servers and storing data into a variable
-    [xml]$ServerListStep0 = (Invoke-RestMethod -Uri $RegionServerURI  -Headers $HeaderDictionary)
-    [xml]$ServerListFinal = ($ServerListStep0.innerxml)
+    Get-APIRequest $RegionServerURI
 
     ## Handling empty response bodies indicating that no servers exist in the queried data center
-    if ($ServerListFinal.Servers.Server -eq $null) {
+    if ($Response.Servers.id -eq $null) {
 
         Write-Host "You do not currently have any Cloud Servers provisioned in the $Region region."
 
@@ -334,8 +347,8 @@ if ($RegionList -contains $Region) {
     ## See first "if" block for notes on each line##
     else {
         
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $ServerListFinal.Servers.Server | Sort-Object Name | ft $ServerListTable -AutoSize
+        ## Use dot notation to show the information needed without further parsing.
+       $Response.Servers | Sort-Object Name | ft $ServerListTable -AutoSize
 
     }
 
@@ -389,7 +402,7 @@ function Get-CloudServerDetails {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name RegionServerDetailURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID.xml"
+        Set-Variable -Name RegionServerDetailURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
 if ($Bandwidth) {
 
@@ -397,10 +410,9 @@ if ($Bandwidth) {
 
     Get-AuthToken
 
-    [xml]$ServerDetailStep0 = (Invoke-RestMethod -Uri $RegionServerDetailURI  -Headers $HeaderDictionary -Method Get)
-    [xml]$ServerDetailFinal = ($ServerDetailStep0.innerxml)
+    Get-APIRequest $RegionServerDetailURI
 
-    $ServerDetailFinal.server | Format-Table $ServerBandwidthTable -AutoSize
+    $Response.server | Format-Table $ServerBandwidthTable -AutoSize
 
     }
 
@@ -418,20 +430,19 @@ else {
 
     Get-AuthToken
 
-    [xml]$ServerDetailStep0 = (Invoke-RestMethod -Uri $RegionServerDetailURI  -Headers $HeaderDictionary -Method Get)
-    [xml]$ServerDetailFinal = ($ServerDetailStep0.innerxml)
+    Get-APIRequest $RegionServerDetailURI
     
         Write-Host ` '
-    Server Status: '($ServerDetailFinal.server.status)'
-    Server Name: '($ServerDetailFinal.server.name)'
-    Server ID: '($ServerDetailFinal.server.id)'
-    Server Created: '($ServerDetailFinal.server.created)'
-    Server Last Updated: '($ServerDetailFinal.server.updated)'
-    Server Image ID: '($ServerDetailFinal.server.image.id)'
-    Server Flavor ID: '($ServerDetailFinal.server.flavor.id)'
-    Server IPv4: '($ServerDetailFinal.server.accessIPv4)'
-    Server IPv6: '($ServerDetailFinal.server.accessIPv6)'
-    Server Build Progress: '($ServerDetailFinal.server.progress)''
+    Server Status: '($Response.server.status)'
+    Server Name: '($Response.server.name)'
+    Server ID: '($Response.server.id)'
+    Server Created: '($Response.server.created)'
+    Server Last Updated: '($Response.server.updated)'
+    Server Image ID: '($Response.server.image.id)'
+    Server Flavor ID: '($Response.server.flavor.id)'
+    Server IPv4: '($Response.server.accessIPv4)'
+    Server IPv6: '($Response.server.accessIPv6)'
+    Server Build Progress: '($Response.server.progress)''
 
     }
 
