@@ -224,6 +224,35 @@ function Add-APIRequest {
         Write-Host "There has been an API call error:" $Error[0]
           }
     }
+
+function Update-APIRequest {
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $URI,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $Body
+        )
+
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $Body -ContentType application/json -Method Put
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
+
+function Remove-APIRequest {
+    Param(
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $URI
+        )
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Method Delete
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
  
 
 ## Region mismatch 
@@ -238,7 +267,11 @@ function Send-RegionError {
 
 function Get-AuthToken {
     ## Check for current authentication token and retrieves a new one if needed
-        if ((Get-Date) -ge $token.access.token.expires) {
+        if (($CloudUsername -eq "") -or ($CloudAPIKey -eq "") -or ($CloudDDI -eq "")) {
+            Write-Host "You are missing critical authentication details.  Please make sure you've entered a username, API key, and DDI (account number) in the module."
+            }
+        
+        elseif ((Get-Date) -ge $token.access.token.expires) {
                 Pop-AuthToken
             }
 
@@ -910,71 +943,45 @@ function Update-CloudServer {
         [switch]$UpdateIPv4Address, 
         [Parameter(Mandatory=$false)]
         [switch]$UpdateIPv6Address,
-        [Parameter(Mandatory=$false)]
-        [switch]$UpdateAdminPassword,
         [Parameter(Mandatory=$true)]
         [string]$CloudServerID,
         [Parameter(Mandatory=$true)]
         [string]$Region,
         [Parameter(Mandatory=$true)]
-        [string]$NewNameOrAddressOrPasswordValue
+        [string]$NewValue
         )
-
-if ($RegionList -contains $Region) {
 
     if ($UpdateName) {
 
     ## Setting variables needed to execute this function
-    [xml]$UpdateCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <server
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        name="'+$NewNameOrAddressOrPasswordValue+'"/>'
-                
-    Get-AuthToken
-    
-    Set-Variable -Name ServerUpdateURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
-
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
-                
-    Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
-
-    Sleep 10
-
-    Get-CloudServers $Region
-                
-                }
+    $UpdateBody = '{
+  "server" :
+    {
+        "name" : "'+$NewValue+'"
+    }
+}'
+    }
 
     elseif ($UpdateIPv4Address) {
 
-    [xml]$UpdateCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <server
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        accessIPv4="'+$NewNameOrAddressOrPasswordValue+'"
-        accessIPv6="'+$IPv6+'"
-    />'
+    $UpdateBody = '{
+  "server" :
+    {
+        "accessIPv4" : "'+$NewValue+'"
+    }
+}'
     
-    Get-AuthToken
-    
-    Set-Variable -Name ServerUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
-
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
-
-    Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
-
-    Sleep 10
-
-    Get-CloudServers $Region
-                    
-                    }
+    }
 
     elseif ($UpdateIPv6Address) {
 
     ## Setting variables needed to execute this function
-    [xml]$UpdateCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <server
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        accessIPv6="'+$NewNameOrAddressOrPasswordValue+'"
-    />'
+    $UpdateBody = '{
+  "server" :
+    {
+        "accessIPv6" : "'+$NewValue+'"
+    }
+}'
     
     Get-AuthToken
     
@@ -990,23 +997,106 @@ if ($RegionList -contains $Region) {
                     
                     }
 
-    elseif ($UpdateAdminPassword) {
-    
-    ## Setting variables needed to execute this function
-    [xml]$UpdateAdminPasswordXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <changePassword
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    adminPass="'+$NewNameOrAddressOrPasswordValue+'"/>'
+if ($RegionList -contains $Region) {
 
     Get-AuthToken
     
-    Set-Variable -Name ServerPasswordUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Set-Variable -Name ServerUpdateURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Invoke-RestMethod -Uri $ServerPasswordUpdateURI -Headers $HeaderDictionary -Body $UpdateAdminPasswordXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Update-APIRequest $ServerUpdateURI $UpdateBody | Out-Null
+                
+    Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
+
+    Sleep 10
+
+    Get-CloudServers $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+
+
+<#
+ .SYNOPSIS
+ This command will update the name, IPv4/IPv6 address, and/or the administrative/root password of your Rackspace Cloud Server.
+
+ .DESCRIPTION
+ Using this command, you will be able to update: 
+ 
+ 1) The name of the Cloud Server
+ 2) The IPv4/IPv6 address
+ 3) The administrative/root password
+ 
+ The usage of the command would look like this "Update-CloudServer -Switch NewValue".
+
+ .PARAMETER UpdateName
+ Using this switch would indicate that you would like to change the name of your Rackspace Cloud server.
+
+ .PARAMETER UpdateIPv4Address
+ Using this switch would indicate that you would like to change the IPv4 address of your Rackspace Cloud server.
+
+ .PARAMETER UpdateIPv6Address
+ Using this switch would indicate that you would like to change the IPv6 address of your Rackspace Cloud server.
+
+ .PARAMETER UpdateAdminPassword
+ Using this switch would indicate that you would like to change the adminitrative/root password within your Rackspace Cloud Server.
+
+ .PARAMETER CloudServerID
+ This field is meant to be the 32 character identifier of your Rackspace Cloud Server.  If you need to figure out the ID, run the "Get-CloudServers" command to retrieve a full list of servers and their IDs from your account.
+
+ .PARAMETER NewNameOrAddressOrPasswordValue
+ This field is where you would enter the *new* value of whatever you are trying to change.  If you are changing the name of the Rackspace Cloud Server, this is where you would enter the new name.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Update-CloudServer -UpdateName abc123ef-9876-abcd-1234-123456abcdef  New-Windows-Web-Server
+ This example shows the command to rename a Rackspace Cloud Server with an ID of "abc123ef-9876-abcd-1234-123456abcdef" to a new name of "New-Windows-Web-Server".
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Update-CloudServer -UpdateAdminPassword abc123ef-9876-abcd-1234-123456abcdef  NewC0mplexPassw0rd!
+ This example shows the command to update the adminsitrative password of a Rackspace Cloud Server with an ID of "abc123ef-9876-abcd-1234-123456abcdef" to a new password of "NewC0mplexPassw0rd!".
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/ServerUpdate.html
+
+#>
+}
+
+function Update-CloudServerPassword {
+
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$CloudServerID,
+        [Parameter(Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Mandatory=$true)]
+        [string]$NewValue
+        )
+
+    ## Setting variables needed to execute this function
+    $UpdateBody = '{
+   "changePassword":
+      {
+         "adminPass": "'+$NewValue+'"
+      }
+}'
+
+if ($RegionList -contains $Region) {
+
+    Get-AuthToken
+    
+    Set-Variable -Name ServerPasswordUpdateURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+
+    Add-APIRequest $ServerPasswordUpdateURI $UpdateBody | Out-Null
 
     Write-Host "Your Cloud Server has been updated."
-                        }
-    }
+
+}
 
 else {
 
@@ -1074,10 +1164,23 @@ function Restart-CloudServer {
         )
 
 ## Setting variables needed to execute this function
-$RestartServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<reboot
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    type="SOFT"/>'
+    
+    
+    if ($hard) {
+        $RestartServerBody = '{
+        "reboot" : {
+            "type" : "HARD"
+        }
+    }'
+               }
+    else {
+    
+    $RestartServerBody = '{
+        "reboot" : {
+            "type" : "SOFT"
+        }
+    }'
+        }
 
 if ($RegionList -contains $Region) {
 
@@ -1085,22 +1188,9 @@ if ($RegionList -contains $Region) {
 
     Set-Variable -Name ServerRestartURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Add-APIRequest $ServerRestartURI $RestartServerBody
 
-    Write-Host "Your Cloud Server will be soft rebooted based on your input."
-
-        if ($hard) {
-        $RestartServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-        <reboot
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        type="HARD"/>'
-
-        Set-Variable -Name ServerRestartURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action" -Scope Global
-
-        Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-        Write-Host "Your Cloud Server will be hard rebooted based on your input."
-                }
+    Write-Host "Your Cloud Server is now being rebooted based on your input.  Please allow a few seconds for the reboot to begin"
 
     }
 
@@ -1149,54 +1239,46 @@ function Resize-CloudServer {
         [string]$CloudServerFlavorID
         )
 
-if ($RegionList -contains $Region) {    
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
     
     if ($Confirm) {
       
       ## Setting variables needed to execute this function
-      $ConfirmServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-      <confirmResize
-      xmlns="http://docs.openstack.org/compute/api/v1.1"/>'
+    $Body = '{
+"confirmResize" : null
+}'
 
-      Set-Variable -Name ServerConfirmURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-      Write-Host "Your resized server has been confirmed."
-
+    $Out = "Your server resize has been confirmed."
             }
     
     elseif ($Revert) {
       
       ## Setting variables needed to execute this function
-      $ConfirmServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-      <revertResize
-      xmlns="http://docs.openstack.org/compute/api/v1.1"/>'
+    $Body = '{
+    "revertResize" : null
+}'
 
-      Set-Variable -Name ServerConfirmURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-      Write-Host "Your resized server has been confirmed."
-
+    $Out = "Your server resize has been reverted."
             }
     
     else {
     
     ## Setting variables needed to execute this function
-    $OptimizeServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <resize xmlns="http://docs.openstack.org/compute/api/v1.1"
-    flavorRef="'+$CloudServerFlavorID+'"/>'
-
-    Get-AuthToken
-    
-    Set-Variable -Name ServerOptimizeURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-    Invoke-RestMethod -Uri $ServerOptimizeURI -Headers $HeaderDictionary -Body $OptimizeServerXMLBody -ContentType application/xml -Method Post
-
-    Write-Host "Your Cloud Server will be resized based on your input. Run Get-CloudServers to check on the status of the build and be sure to confirm the resized server after rebuild."
-
+    $Body = '{
+    "resize" : {
+        "flavorRef" : "'+$CloudServerFlavorID+'"
     }
+}'
+
+    $Out = "Your server will now be resized.  Please note, resize requests are only valid against standard flavors, and not compute/memory/IO optimized flavors."
+    }
+
+if ($RegionList -contains $Region) {    
+
+      Add-APIRequest $URI $Body
+
+      Write-Host $Out
+
 }
 
 else {
@@ -1258,9 +1340,9 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
     
     ## Setting variables needed to execute this function
-    Set-Variable -Name ServerDeleteURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
     
-    Invoke-RestMethod -Uri $ServerDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    Remove-APIRequest $URI -ErrorAction Stop
 
     Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
 
@@ -1311,9 +1393,9 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
     
     ## Setting variables needed to execute this function
-    Set-Variable -Name DFWImageDeleteURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
 
-    Invoke-RestMethod -Uri $DFWImageDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    Remove-APIRequest $URI -ErrorAction Stop
 
     Write-Host "Your Rackspace Cloud Server Image has been deleted."
 
@@ -1354,29 +1436,51 @@ function Set-CloudServerRescueMode {
     Param(
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudServerID,
-        [Parameter(Position=1,Mandatory=$true)]
+        [Parameter(Position=1,Mandatory=$false)]
+        [string]$RescueImageID,
+        [Parameter(Position=2,Mandatory=$true)]
         [string]$Region
         )
     
+if ($RescueImageID) {    
+    
     ## Setting variables needed to execute this function
-    [xml]$RescueModeXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <rescue xmlns="http://docs.openstack.org/compute/ext/rescue/api/v1.1" />'
+    $Body = '{
+    "rescue" :
+        {
+            "rescue_image_ref": "'+$RescueImageID+'"
+        }
+}'
 
+}
+
+else {
+
+        ## Setting variables needed to execute this function
+    $Body = '{
+    "rescue" :
+        {
+            "rescue_image_ref": "none"
+        }
+}'
+
+}
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name RescueModeURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-    $RescueModePass = $RescueMode.adminPass
+    Add-APIRequest $URI $Body | Out-Null
+
+    $RescuePass = $Response.adminPass
 
     Write-Host "Rescue Mode takes 5 - 10 minutes to enable. Please do not interact with this server again until it's status is RESCUE.
     Your temporary password in rescue mode is:
 
-    $RescueModePass
+    $RescuePass
     "
 
 }
@@ -1397,8 +1501,9 @@ function Remove-CloudServerRescueMode {
         )
     
     ## Setting variables needed to execute this function
-    [xml]$RescueModeXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<unrescue xmlns="http://docs.rackspacecloud.com/servers/api/v1.1" />'
+    $Body = '{
+"unrescue" : null
+}'
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {
@@ -1407,9 +1512,9 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name RescueModeURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Add-APIRequest $URI $Body
 
     Write-Host "Your server is being restored to normal service.  Please wait for the status of the server to show ACTIVE before carrying out any further commands against it."
 
