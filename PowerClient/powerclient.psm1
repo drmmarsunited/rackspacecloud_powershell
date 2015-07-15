@@ -311,7 +311,7 @@ function Get-CloudServerImages {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail"
+	Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region){
@@ -320,7 +320,7 @@ if ($RegionList -contains $Region){
     Get-AuthToken
 
     ## Making the call to the API for a list of available server images and storing data into a variable
-    Get-APIRequest $RegionImageURI
+    Get-APIRequest $URI
 
     ## Use dot notation to show the information needed without further parsing.
     $Response.Images | Sort-Object Name | ft $ImageListTable -AutoSize
@@ -375,7 +375,7 @@ function Get-CloudServers{
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail"
+	Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -384,7 +384,7 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available servers and storing data into a variable
-    Get-APIRequest $RegionServerURI
+    Get-APIRequest $URI
 
     ## Handling empty response bodies indicating that no servers exist in the queried data center
     if ($Response.Servers.id -eq $null) {
@@ -449,13 +449,13 @@ function Get-CloudServerDetails {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name RegionServerDetailURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+        Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
     if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    Get-APIRequest $RegionServerDetailURI
+    Get-APIRequest $URI
     
         Write-Host ` '
     Server Status: '($Response.server.status)'
@@ -527,13 +527,13 @@ function Get-CloudServerFlavors() {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionFlavorURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/flavors/detail.xml"
+	Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/flavors/detail.xml"
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    Get-APIRequest $RegionFlavorURI
+    Get-APIRequest $URI
     
     $Response.Flavors.flavor | Sort-Object id | ft $FlavorListTable -AutoSize
     }
@@ -589,11 +589,11 @@ function Get-CloudServerAttachments {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name RegionServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
 
  if ($RegionList -contains $Region) {
         
-        Get-APIRequest $RegionServerURI
+        Get-APIRequest $URI
 
             if (!$Response.volumeAttachments) {
                 Write-Host "This cloud server has no cloud block storage volumes attached." -ForegroundColor Red
@@ -666,13 +666,13 @@ function Add-CloudServer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NewServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers"
+        Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers"
 
     if ($CloudServerNetwork1ID) {
 
 
         if ($Isolated) {
-            $NewCloudServerBody = '{
+            $Body = '{
     "server" : {
         "name" : "'+$CloudServerName+'",
         "imageRef" : "'+$CloudServerImageID+'",
@@ -688,7 +688,7 @@ function Add-CloudServer {
             }
 
             else {
-            $NewCloudServerBody = '{
+            $Body = '{
     "server" : {
         "name" : "'+$CloudServerName+'",
         "imageRef" : "'+$CloudServerImageID+'",
@@ -713,7 +713,7 @@ function Add-CloudServer {
     elseif ($CloudServerNetwork2ID) {
 
             if ($Isolated) {
-            $NewCloudServerBody = '{
+            $Body = '{
     "server" : {
         "name" : "'+$CloudServerName+'",
         "imageRef" : "'+$CloudServerImageID+'",
@@ -732,7 +732,7 @@ function Add-CloudServer {
             }
 
             else {
-            $NewCloudServerBody = '{
+            $Body = '{
     "server" : {
         "name" : "'+$CloudServerName+'",
         "imageRef" : "'+$CloudServerImageID+'",
@@ -761,7 +761,7 @@ function Add-CloudServer {
     elseif ($CloudServerNetwork3ID) {
 
             if ($Isolated) {
-            $NewCloudServerBody = '{
+            $Body = '{
     "server" : {
         "name" : "'+$CloudServerName+'",
         "imageRef" : "'+$CloudServerImageID+'",
@@ -783,7 +783,7 @@ function Add-CloudServer {
             }
 
             else {
-            $NewCloudServerBody = '{
+            $Body = '{
     "server" : {
         "name" : "'+$CloudServerName+'",
         "imageRef" : "'+$CloudServerImageID+'",
@@ -812,14 +812,14 @@ function Add-CloudServer {
     }
 
     else {
-    $NewCloudServerBody = '{"server":{"name":"'+$CloudServerName+'","imageRef":"'+$CloudServerImageID+'","flavorRef":"'+$CloudServerFlavorID+'","OS-DCF:diskConfig":"AUTO"}}'
+    $Body = '{"server":{"name":"'+$CloudServerName+'","imageRef":"'+$CloudServerImageID+'","flavorRef":"'+$CloudServerFlavorID+'","OS-DCF:diskConfig":"AUTO"}}'
             }
  
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        Add-APIRequest $NewServerURI $NewCloudServerBody
+        Add-APIRequest $URI $Body
 
         Write-Host "The following is the ID and password of your new server. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -889,15 +889,15 @@ function Add-CloudServerImage {
         )
     
     ## Setting variables needed to execute this function
-    $NewImageBody = '{"createImage" : {"name" : "'+$NewImageName+'"} }'
+    $Body = '{"createImage" : {"name" : "'+$NewImageName+'"} }'
 
-    Set-Variable -Name ServerImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    Add-APIRequest $ServerImageURI $NewImageBody
+    Add-APIRequest $URI $Body
 
     Write-Host "Your new Rackspace Cloud Server image is being created."
 
@@ -951,10 +951,12 @@ function Update-CloudServer {
         [string]$NewValue
         )
 
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+
     if ($UpdateName) {
 
     ## Setting variables needed to execute this function
-    $UpdateBody = '{
+    $Body = '{
   "server" :
     {
         "name" : "'+$NewValue+'"
@@ -964,7 +966,7 @@ function Update-CloudServer {
 
     elseif ($UpdateIPv4Address) {
 
-    $UpdateBody = '{
+    $Body = '{
   "server" :
     {
         "accessIPv4" : "'+$NewValue+'"
@@ -976,7 +978,7 @@ function Update-CloudServer {
     elseif ($UpdateIPv6Address) {
 
     ## Setting variables needed to execute this function
-    $UpdateBody = '{
+    $Body = '{
   "server" :
     {
         "accessIPv6" : "'+$NewValue+'"
@@ -1000,10 +1002,8 @@ function Update-CloudServer {
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
-    
-    Set-Variable -Name ServerUpdateURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
 
-    Update-APIRequest $ServerUpdateURI $UpdateBody | Out-Null
+    Update-APIRequest $URI $Body | Out-Null
                 
     Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
 
@@ -1078,8 +1078,10 @@ function Update-CloudServerPassword {
         [string]$NewValue
         )
 
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+
     ## Setting variables needed to execute this function
-    $UpdateBody = '{
+    $Body = '{
    "changePassword":
       {
          "adminPass": "'+$NewValue+'"
@@ -1089,10 +1091,8 @@ function Update-CloudServerPassword {
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
-    
-    Set-Variable -Name ServerPasswordUpdateURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Add-APIRequest $ServerPasswordUpdateURI $UpdateBody | Out-Null
+    Add-APIRequest $URI $Body | Out-Null
 
     Write-Host "Your Cloud Server has been updated."
 
@@ -1163,11 +1163,12 @@ function Restart-CloudServer {
         [switch]$Hard
         )
 
-## Setting variables needed to execute this function
-    
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+
+    ## Setting variables needed to execute this function 
     
     if ($hard) {
-        $RestartServerBody = '{
+        $Body = '{
         "reboot" : {
             "type" : "HARD"
         }
@@ -1175,7 +1176,7 @@ function Restart-CloudServer {
                }
     else {
     
-    $RestartServerBody = '{
+    $Body = '{
         "reboot" : {
             "type" : "SOFT"
         }
@@ -1186,9 +1187,7 @@ if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    Set-Variable -Name ServerRestartURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-    Add-APIRequest $ServerRestartURI $RestartServerBody
+    Add-APIRequest $URI $Body
 
     Write-Host "Your Cloud Server is now being rebooted based on your input.  Please allow a few seconds for the reboot to begin"
 
@@ -1335,12 +1334,12 @@ function Remove-CloudServer {
         [string]$Region
         )
 
+    ## Setting variables needed to execute this function
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
-    
-    ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
     
     Remove-APIRequest $URI -ErrorAction Stop
 
@@ -1387,13 +1386,12 @@ function Remove-CloudServerImage {
         [string]$Region
         )
 
+    ## Setting variables needed to execute this function
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
 
 if ($RegionList -contains $Region) {
     
     Get-AuthToken
-    
-    ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
 
     Remove-APIRequest $URI -ErrorAction Stop
 
@@ -1441,6 +1439,9 @@ function Set-CloudServerRescueMode {
         [Parameter(Position=2,Mandatory=$true)]
         [string]$Region
         )
+
+    ## Setting variables needed to execute this function
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
     
 if ($RescueImageID) {    
     
@@ -1470,9 +1471,6 @@ if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
     Add-APIRequest $URI $Body | Out-Null
 
     $RescuePass = $Response.adminPass
@@ -1499,20 +1497,18 @@ function Remove-CloudServerRescueMode {
         [string]$CloudServerID,
         [string]$Region
         )
-    
+
     ## Setting variables needed to execute this function
     $Body = '{
 "unrescue" : null
 }'
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {
     
     ## Retrieving authentication token
     Get-AuthToken
-
-    ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
     Add-APIRequest $URI $Body
 
