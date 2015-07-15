@@ -1,7 +1,7 @@
 ﻿## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
 ## Description: PSv3 module for NextGen Rackspace Cloud API interaction (PowerClient)##
-## Version 2.0 ##
+## Version 2.1 ##
 ## Contact Info: mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -208,6 +208,22 @@ function Get-APIRequest {
         Write-Host "There has been an API call error:" $Error[0]
           }
     }
+
+function Add-APIRequest {
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $URI,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $Body
+        )
+
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $Body -ContentType application/json -Method Post
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
  
 
 ## Region mismatch 
@@ -393,38 +409,14 @@ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/List_Servers-d1e207
 function Get-CloudServerDetails {
 
     Param(
-        [Parameter(Position=0,Mandatory=$false)]
-        [switch]$Bandwidth,
-        [Parameter(Position=1,Mandatory=$true)]
+        [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudServerID,
-        [Parameter(Position=2,Mandatory=$true)]
+        [Parameter(Position=1,Mandatory=$true)]
         [string]$Region
         )
 
         ## Setting variables needed to execute this function
         Set-Variable -Name RegionServerDetailURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
-
-if ($Bandwidth) {
-
-    if ($RegionList -contains $Region) {
-
-    Get-AuthToken
-
-    Get-APIRequest $RegionServerDetailURI
-
-    $Response.server | Format-Table $ServerBandwidthTable -AutoSize
-
-    }
-
-    else {
-
-    Send-RegionError
-
-    }
-
-}
-
-else {
 
     if ($RegionList -contains $Region) {
 
@@ -452,7 +444,6 @@ else {
 
     }
 
-}
 <#
  .SYNOPSIS
  The Get-CloudServerDetails cmdlet will pull down a list of detailed information for a specific Rackspace Cloud Server.
@@ -509,10 +500,9 @@ if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    [xml]$ServerFlavorListStep0 = (Invoke-RestMethod -Uri $RegionFlavorURI  -Headers $HeaderDictionary)
-    [xml]$ServerFlavorListFinal = ($ServerFlavorListStep0.innerxml)
+    Get-APIRequest $RegionFlavorURI
     
-    $ServerFlavorListFinal.Flavors.Flavor | Sort-Object id | ft $FlavorListTable -AutoSize
+    $Response.Flavors.flavor | Sort-Object id | ft $FlavorListTable -AutoSize
     }
 
 else {
@@ -570,15 +560,14 @@ function Get-CloudServerAttachments {
 
  if ($RegionList -contains $Region) {
         
-        [xml]$CloudServerAttachmentsStep0 = Invoke-RestMethod -Uri $RegionServerURI -Headers $HeaderDictionary -Method Get
-        [xml]$CloudServerAttachmentsFinal = $CloudServerAttachmentsStep0.InnerXml
+        Get-APIRequest $RegionServerURI
 
-            if (!$CloudServerAttachmentsFinal.volumeAttachments) {
+            if (!$Response.volumeAttachments) {
                 Write-Host "This cloud server has no cloud block storage volumes attached." -ForegroundColor Red
             }
 
             else {
-                $CloudServerAttachmentsFinal.volumeAttachments.volumeAttachment | ft $ServerAttachmentsTable -AutoSize
+                $Response.volumeAttachments.volumeAttachment | ft $ServerAttachmentsTable -AutoSize
             }
     }
 
@@ -608,7 +597,7 @@ else {
 
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerAttachments -CloudServerID 30e52067-e3ba-4bf6-98df-4e9b0e83e205 -Region DFW
- This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the ORD region.
+ This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the DFW region.
 
 PS C:\Users\mitch.robins> Get-CloudServerAttachments -CloudServerID 30e52067-e3ba-4bf6-98df-4e9b0e83e205 -Region DFW
 
@@ -644,66 +633,94 @@ function Add-CloudServer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NewServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers.xml"
+        Set-Variable -Name NewServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers"
 
     if ($CloudServerNetwork1ID) {
 
 
         if ($Isolated) {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                </networks>
-            </server>'
+            $NewCloudServerBody = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }
+        ]
+    }
+}'
             }
 
             else {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-	imageRef="'+$CloudServerImageID+'" 
-	flavorRef="'+$CloudServerFlavorID+'" 
-	name="'+$CloudServerName+'">
-	<networks>
-		<uuid>00000000-0000-0000-0000-000000000000</uuid>
-		<uuid>11111111-1111-1111-1111-111111111111</uuid>
-		<uuid>'+$CloudServerNetwork1ID+'</uuid>
-	</networks>
-</server>'
+            $NewCloudServerBody = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "00000000-0000-0000-0000-000000000000"
+            }, 
+            {
+                 "uuid": "11111111-1111-1111-1111-111111111111"
+            } 
+        ]
+    }
+}'
             }
     }
 
     elseif ($CloudServerNetwork2ID) {
 
             if ($Isolated) {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                </networks>
-            </server>'
+            $NewCloudServerBody = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            }
+        ]
+    }
+}'
             }
 
             else {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                    <uuid>00000000-0000-0000-0000-000000000000</uuid>
-                    <uuid>11111111-1111-1111-1111-111111111111</uuid>
-                </networks>
-            </server>'
+            $NewCloudServerBody = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            }, 
+            {
+                 "uuid": "00000000-0000-0000-0000-000000000000"
+            }, 
+            {
+                 "uuid": "11111111-1111-1111-1111-111111111111"
+            } 
+        ]
+    }
+}'
             }
 
     }
@@ -711,55 +728,69 @@ function Add-CloudServer {
     elseif ($CloudServerNetwork3ID) {
 
             if ($Isolated) {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork3ID+'</uuid>
-                </networks>
-            </server>'
+            $NewCloudServerBody = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork3ID+'"
+            } 
+        ]
+    }
+}'
             }
 
             else {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork3ID+'</uuid>
-                    <uuid>00000000-0000-0000-0000-000000000000</uuid>
-                    <uuid>11111111-1111-1111-1111-111111111111</uuid>
-                </networks>
-            </server>'
+            $NewCloudServerBody = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            },
+            {
+                 "uuid": "'+$CloudServerNetwork3ID+'"
+            },
+            {
+                 "uuid": "00000000-0000-0000-0000-000000000000"
+            }, 
+            {
+                 "uuid": "11111111-1111-1111-1111-111111111111"
+            } 
+        ]
+    }
+}'
             }
     }
 
     else {
-    [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-            </server>'
+    $NewCloudServerBody = '{"server":{"name":"'+$CloudServerName+'","imageRef":"'+$CloudServerImageID+'","flavorRef":"'+$CloudServerFlavorID+'","OS-DCF:diskConfig":"AUTO"}}'
             }
  
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        $NewCloudServer = Invoke-RestMethod -Uri $NewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-        $NewCloudServerInfo = $NewCloudServer.innerxml
+        Add-APIRequest $NewServerURI $NewCloudServerBody
 
         Write-Host "The following is the ID and password of your new server. Please wait 10 seconds for a refreshed Cloud Server list."
 
-        $NewCloudServer.Server | ft $newservertable
+        $Response.Server | ft $newservertable
 
         Sleep 10
 
@@ -825,19 +856,15 @@ function Add-CloudServerImage {
         )
     
     ## Setting variables needed to execute this function
-    $NewImageXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<createImage
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    name="'+$NewImageName+'">
-</createImage>'
+    $NewImageBody = '{"createImage" : {"name" : "'+$NewImageName+'"} }'
+
+    Set-Variable -Name ServerImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
-    
-    Set-Variable -Name ServerImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerImageURI -Headers $HeaderDictionary -Body $NewImageXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Add-APIRequest $ServerImageURI $NewImageBody
 
     Write-Host "Your new Rackspace Cloud Server image is being created."
 
