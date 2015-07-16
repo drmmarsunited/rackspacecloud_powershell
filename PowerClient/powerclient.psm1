@@ -30,8 +30,7 @@ $ServerListTable = @{Expression={$_.id};Label="Server ID";width=38},
 @{Expression={$_.Status};Label="Server Status";width=15}, 
 @{Expression={$_.addresses.public.addr};Label="Server IP Addresses";width=200}
 
-$NetworkListTable = @{Expression={$_.label};Label="Network Name";width=25}, 
-@{Expression={$_.cidr};Label="Assigned Block";width=30}, 
+$NetworkListTable = @{Expression={$_.name};Label="Network Name";width=25},  
 @{Expression={$_.id};Label="Network ID";width=33}
 
 $LBListTable = @{Expression={$_.id};Label="CLB ID";width=15}, 
@@ -193,6 +192,27 @@ Set-Alias -Name rclbcl -Value Remove-ConnectionLogging
 Set-Alias -Name rclbct -Value Remove-ConnectionThrottling
 #>
 
+## Build base service URLs and URIs
+function Get-URI ($service, $region) {
+
+    $Endpoint = Get-CloudEndpoints $service | where {$_.region -eq $region}
+    $Global:URL = $Endpoint.publicURL
+
+    $Global:serversURI = "/servers"
+    $Global:serversDetailURI = "/servers/detail"
+    $Global:serversActionURI = "/servers/$CloudServerID/action"
+    $Global:flavorsURI = "/flavors"
+    $Global:flavorsDetailURI = "$flavorsURI/detail"
+    $Global:imagesURI = "/images"
+    $Global:imagesDetailURI = "$imagesURI/detail"
+    $Global:volumesURI = "/servers/$CloudServerID/os-volume_attachments"
+    $Global:networksURI = "/networks"
+    $Global:subnetsURI = "/subnets"
+    $Global:blockstoragevolumesURI = "/volumes"
+    $Global:blockstoragevolumetypesURI = "/types"
+
+} 
+
 ## DEFINE FUNCTIONS
 
 ## Global API Call
@@ -281,23 +301,60 @@ function Get-AuthToken {
 function Pop-AuthToken() {
     
     ## Setting variables needed for function execution
-    Set-Variable -Name AuthURI -Value "https://identity.api.rackspacecloud.com/v2.0/tokens.xml"
+    Set-Variable -Name AuthURI -Value "https://identity.api.rackspacecloud.com/v2.0/tokens"
     Set-Variable -Name AuthBody -Value ('{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"'+$CloudUsername+'", "apiKey":"'+$CloudAPIKey+'"}}}')
 
     ## Making the call to the token authentication API and saving it's output as a global variable for reference in every other function.
     Set-Variable -Name token -Value (Invoke-RestMethod -Uri $AuthURI -Body $AuthBody -ContentType application/json -Method Post) -Scope Global
     
-    Set-Variable -Name CloudServerRegionListStep0 -Value ($token.access.serviceCatalog.service | Where-Object {$_.type -eq "compute"})
-    Set-Variable -Name CloudServerRegionList -Value ($CloudServerRegionListStep0.endpoint)
-
-    
     $FinalToken = $token.access.token.id
-    
+    $Global:Catalog = $token.access.serviceCatalog
     
 
     ## Headers in powershell need to be defined as a dictionary object, so here I'm creating a dictionary object with the newly granted token. It's global, as it's needed in every future request.
     Set-Variable -Name HeaderDictionary -Value (new-object "System.Collections.Generic.Dictionary``2[[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]") -Scope Global
     $HeaderDictionary.Add("X-Auth-Token", $finaltoken)
+}
+
+function Get-CloudEndpoints ($CloudProduct){
+    switch ( $CloudProduct ) {
+        "cloudNetworks"  {
+            return ( $catalog | `
+                where { $_.name -eq "cloudNetworks" } ).endpoints | `
+                select region, publicURL
+            }
+        "cloudServers"  {
+            return ( $catalog | `
+                where { $_.name -eq "cloudServersOpenStack" } ).endpoints | `
+                select region, publicURL
+            }
+        "cloudBlockStorage" {
+            return ( ($catalog | `
+                where { $_.type -eq "volume" }).endpoints | `
+                select region, publicURL )
+        }
+        "cloudLoadBalancers" {
+            return ( ($catalog | `
+                where {$_.name -eq "cloudLoadBalancers" -and $_.type -eq "rax:load-balancer"}).endpoints | `
+                select region, publicURL)
+        }
+        "cloudFiles" {
+            return ( ($catalog | `
+                where { $_.type -eq "object-store" }).endpoints | `
+                select region, publicURL)  
+                }
+        "cloudDNS" {
+            return ( ($catalog | `
+                where { $_.type -eq "rax:dns" }).endpoints | `
+                select region, publicURL)
+        }
+        "cloudMonitoring" {
+            return ( ($catalog | `
+                where { $_.type -eq "rax:monitor" }).endpoints | `
+                select region, publicURL)
+        }
+                            
+    }
 }
 
 
@@ -311,7 +368,8 @@ function Get-CloudServerImages {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail"
+    Get-URI cloudServers $Region
+	$URI = "$URL$imagesDetailURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region){
@@ -370,12 +428,13 @@ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Images-d1e4427.html
 function Get-CloudServers{
 
     Param(
-        [Parameter (Position=0, Mandatory=$false)]
+        [Parameter (Position=0, Mandatory=$true)]
         [string] $Region
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail"
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversDetailURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -449,7 +508,8 @@ function Get-CloudServerDetails {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+        Get-URI cloudServers $Region
+        $URI = "$URL$serversURI/$CloudServerID"
 
     if ($RegionList -contains $Region) {
 
@@ -527,7 +587,8 @@ function Get-CloudServerFlavors() {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/flavors/detail.xml"
+    Get-URI cloudServers $Region
+    $URI = "$URL$flavorsDetailURI"
 
 if ($RegionList -contains $Region) {
 
@@ -535,7 +596,7 @@ if ($RegionList -contains $Region) {
 
     Get-APIRequest $URI
     
-    $Response.Flavors.flavor | Sort-Object id | ft $FlavorListTable -AutoSize
+    $Response.Flavors | Sort-Object id | ft $FlavorListTable -AutoSize
     }
 
 else {
@@ -589,13 +650,14 @@ function Get-CloudServerAttachments {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Get-URI cloudServers $Region
+    $URI = "$URL$volumesURI"
 
  if ($RegionList -contains $Region) {
         
         Get-APIRequest $URI
 
-            if (!$Response.volumeAttachments) {
+            if ($Response.volumeAttachments.Count -eq 0) {
                 Write-Host "This cloud server has no cloud block storage volumes attached." -ForegroundColor Red
             }
 
@@ -666,7 +728,8 @@ function Add-CloudServer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers"
+        Get-URI cloudServers $Region
+        $URI = "$URL$serversURI"
 
     if ($CloudServerNetwork1ID) {
 
@@ -891,7 +954,8 @@ function Add-CloudServerImage {
     ## Setting variables needed to execute this function
     $Body = '{"createImage" : {"name" : "'+$NewImageName+'"} }'
 
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
 
 if ($RegionList -contains $Region) {
 
@@ -951,11 +1015,12 @@ function Update-CloudServer {
         [string]$NewValue
         )
 
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversURI/$CloudServerID"
 
     if ($UpdateName) {
 
-    ## Setting variables needed to execute this function
     $Body = '{
   "server" :
     {
@@ -1078,9 +1143,10 @@ function Update-CloudServerPassword {
         [string]$NewValue
         )
 
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
     ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
+
     $Body = '{
    "changePassword":
       {
@@ -1163,10 +1229,10 @@ function Restart-CloudServer {
         [switch]$Hard
         )
 
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
 
-    ## Setting variables needed to execute this function 
-    
     if ($hard) {
         $Body = '{
         "reboot" : {
@@ -1238,11 +1304,12 @@ function Resize-CloudServer {
         [string]$CloudServerFlavorID
         )
 
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
     
     if ($Confirm) {
       
-      ## Setting variables needed to execute this function
     $Body = '{
 "confirmResize" : null
 }'
@@ -1335,7 +1402,8 @@ function Remove-CloudServer {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversURI/$CloudServerID"
 
 if ($RegionList -contains $Region) {
 
@@ -1387,7 +1455,8 @@ function Remove-CloudServerImage {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
+    Get-URI cloudServers $Region
+    $URI = "$URL$imagesURI/$CloudServerID"
 
 if ($RegionList -contains $Region) {
     
@@ -1441,7 +1510,8 @@ function Set-CloudServerRescueMode {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
     
 if ($RescueImageID) {    
     
@@ -1502,7 +1572,9 @@ function Remove-CloudServerRescueMode {
     $Body = '{
 "unrescue" : null
 }'
-    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {
@@ -1536,7 +1608,8 @@ function Get-CloudBlockStorageTypes {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v2/$CloudDDI/types.xml"
+    Get-URI cloudBlockStorage $Region
+    $URI = "$URL$blockstoragevolumetypesURI"
 
     if ($RegionList -contains $Region) {    
     
@@ -1544,11 +1617,10 @@ function Get-CloudBlockStorageTypes {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolTypeStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolTypeFinal.volume_types.volume_type | ft $VolTypeTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.volume_types | ft $VolTypeTable -AutoSize
     }
 
     else {
@@ -1595,7 +1667,8 @@ function Get-CloudBlockStorageVolList {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes.xml"
+    Get-URI cloudBlockStorage $Region
+    $URI = "$URL$blockstoragevolumesURI"
 
     if ($RegionList -contains $Region) {    
     
@@ -1603,11 +1676,10 @@ function Get-CloudBlockStorageVolList {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolListStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolListFinal = ($VolListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolListFinal.volumes.volume | ft $VolListTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.volumes | ft $VolListTable -AutoSize
     }
 
     else {
@@ -1656,7 +1728,7 @@ function Get-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1664,11 +1736,10 @@ function Get-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolListStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolListFinal = ($VolListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolListFinal.volume | ft $VolTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.volume | ft $VolTable -AutoSize
     }
 
     else {
@@ -1716,18 +1787,18 @@ function Add-CloudBlockStorageVol {
         [string] $CloudBlockStorageVolName,
         [Parameter (Position=2, Mandatory=$false)]
         [string] $CloudBlockStorageVolDesc,
-        [Parameter (Position=2, Mandatory=$true)]
-        [int] $CloudBlockStorageVolSize,
-        [Parameter (Position=2, Mandatory=$true)]
-        [string] $CloudBlockStorageVolType,
         [Parameter (Position=3, Mandatory=$true)]
+        [int] $CloudBlockStorageVolSize,
+        [Parameter (Position=4, Mandatory=$true)]
+        [string] $CloudBlockStorageVolType,
+        [Parameter (Position=5, Mandatory=$true)]
         [string] $Region
     )
 
     ## Force switch variable setting
-    if ($CloudBlockStorageVolSize -lt 100) {
-        Write-Host "You must enter a volume size of greater than 100GB." -ForegroundColor Red
-        break
+    if ($CloudBlockStorageVolSize -lt 50) {
+        Write-Host "You must enter a volume size of greater than 75 GB for SATA volumes and 50 GB for SSD volumes." -ForegroundColor Red
+        Break
     }
 
     elseif ($CloudBlockStorageVolSize -gt 1024) {
@@ -1736,17 +1807,17 @@ function Add-CloudBlockStorageVol {
     }
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes"
 
-    ## Create XML request
-    [xml]$NewVolXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<volume xmlns="http://docs.rackspace.com/volume/api/v1"
-        display_name="'+$CloudBlockStorageVolName+'"
-        display_description="'+$CloudBlockStorageVolDesc+'"
-        size="'+$CloudBlockStorageVolSize+'"
-        volume_type="'+$CloudBlockStorageVolType+'">
- 
-</volume>'
+    ## Create JSON request
+    $Body = '{
+    "volume": {
+        "display_name": "'+$CloudBlockStorageVolName+'",
+        "display_description": "'+$CloudBlockStorageVolDesc+'",
+        "size": '+$CloudBlockStorageVolSize+',
+        "volume_type": "'+$CloudBlockStorageVolType+'"
+     }
+}'
 
     if ($RegionList -contains $Region) {
     
@@ -1754,10 +1825,9 @@ function Add-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
-    [xml]$VolFinal = ($VolStep0.innerxml)
+    Add-APIRequest $URI $Body
 
-        $VolFinal.volume | ft $VolTable -AutoSize
+    $Response.volume | ft $VolTable -AutoSize
     }
 
     else {
@@ -1807,7 +1877,7 @@ function Remove-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1815,8 +1885,7 @@ function Remove-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
-    [xml]$VolFinal = ($VolStep0.innerxml)
+    Remove-APIRequest $URI
 
         Write-Host "The volume has been deleted."
     }
@@ -1861,7 +1930,7 @@ function Get-CloudBlockStorageSnapList {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots"
 
         if ($RegionList -contains $Region) {    
     
@@ -1869,11 +1938,17 @@ function Get-CloudBlockStorageSnapList {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolSnapFinal.snapshots.snapshot | ft $VolSnapTable -AutoSize
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
+    $Response.snapshots | ft $VolSnapTable -AutoSize
+
+    if ($Response.snapshots.Count -eq 0) {
+        Write-Host "You do not currently have any Block Storage Volume snapshots."
+        }
+
+    else {}
+
     }
 
     else {
@@ -1915,7 +1990,7 @@ function Get-CloudBlockStorageSnap {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1923,11 +1998,10 @@ function Get-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
+    $Response.snapshot | ft $VolSnapTable -AutoSize
     }
 
     else {
@@ -1993,16 +2067,17 @@ function Add-CloudBlockStorageSnap {
     }
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots"
 
-    ## Create XML request
-    [xml]$NewSnapXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<snapshot xmlns="http://docs.rackspace.com/volume/api/v1"
-          name="'+$CloudBlockStorageSnapName+'"
-          display_name="'+$CloudBlockStorageSnapName+'"
-          display_description="'+$CloudBlockStorageSnapDesc+'"
-          volume_id="'+$CloudBlockStorageVolID+'"
-          force="'+$ForceOut+'" />'
+    ## Create JSON request
+    $Body = '{
+    "snapshot": {
+        "display_name": "'+$CloudBlockStorageSnapName+'",
+        "display_description": "'+$CloudBlockStorageSnapDesc+'",
+        "volume_id": "'+$CloudBlockStorageVolID+'",
+        "force": '+$ForceOut+'
+     }
+}'
 
     if ($RegionList -contains $Region) {
     
@@ -2010,10 +2085,10 @@ function Add-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Add-APIRequest $URI $Body
 
-        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
+    $Response.snapshot | ft $VolSnapTable -AutoSize
+
     }
 
     else {
@@ -2063,7 +2138,7 @@ function Remove-CloudBlockStorageSnap {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID"
 
     if ($RegionList -contains $Region) {    
     
@@ -2071,10 +2146,10 @@ function Remove-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Remove-APIRequest $URI
 
-        Write-Host "The snapshot has been deleted."
+    Write-Host "The snapshot has been deleted."
+    
     }
 
     else {
@@ -2121,17 +2196,18 @@ function Connect-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name ServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments"
 
-    [xml]$AttachStorage = '<?xml version="1.0" encoding="UTF-8"?>
-<volumeAttachment
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    volumeId="'+$CloudBlockStorageVolID+'"
-    device="/dev/xvdb"/>'
+    $Body = '{
+   "volumeAttachment":{
+      "device":null,
+      "volumeId":"'+$CloudBlockStorageVolID+'"
+   }
+}'
 
  if ($RegionList -contains $Region) {
         
-        Invoke-RestMethod -Uri $ServerURI -Headers $HeaderDictionary -Body $AttachStorage -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
+        Add-APIRequest $URI $Body | Out-Null
 
         Write-Host "The cloud block storage volume has been attached.  Please wait 10 seconds for confirmation:"
 
@@ -2175,11 +2251,11 @@ function Disconnect-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name ServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments/$CloudServerAttachmentID.xml"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments/$CloudServerAttachmentID"
 
  if ($RegionList -contains $Region) {
         
-        Invoke-RestMethod -Uri $ServerURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI -ErrorAction Stop
 
         Write-Host "The cloud block storage volume has been detached.  Please wait 15 seconds for confirmation:"
 
@@ -2216,12 +2292,13 @@ else {
 function Get-CloudNetworks{
 
     Param(
-        [Parameter (Position=0, Mandatory=$false)]
+        [Parameter (Position=0, Mandatory=$true)]
         [string] $Region
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name NetworksURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+    Get-URI cloudNetworks $Region
+    $URI = "$URL$networksURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -2230,11 +2307,10 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available networks and storing data into a variable
-    [xml]$NetworkListStep0 = (Invoke-RestMethod -Uri $NetworksURI  -Headers $HeaderDictionary)
-    [xml]$NetworkListFinal = ($NetworkListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $NetworkListFinal.networks.network | Sort-Object label | ft $NetworkListTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.networks | Sort-Object label | ft $NetworkListTable -AutoSize
 
 }
 
@@ -2262,10 +2338,10 @@ else {
 
  PS C:\Users\mitch.robins> Get-CloudNetworks ORD
  
- Network Name           Assigned Block   Network ID                          
-------------           --------------   ----------                          
-MitchPSTest            192.168.0.0/16   03debf75-1234-4c90-8015-5de15ffbb93b
-Nicks-192.168.100.0/24 192.168.100.0/24 3901a409-1234-4457-bf69-d0db01ea40f4
+Network Name Network ID                          
+------------ ----------                          
+pstest       191d3959-331e-4e29-a5f7-a8c0619123df
+pstest1      dfc46217-942a-4609-98b4-ed916df8547f
 
 .LINK
 http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
@@ -2273,36 +2349,97 @@ http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
 #>
 }
 
+<# function Get-CloudNetworksSubnets{
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Get-URI cloudNetworks $Region
+    $URI = "$URL$subnetsURI"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($RegionList -contains $Region) {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available networks and storing data into a variable
+    Get-APIRequest $URI
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.networks | Sort-Object label | ft $NetworkListTable -AutoSize
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudNetworks cmdlet will pull down a list of all Rackspace Cloud Networks on your account.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudNetworks -Region DFW
+ This example shows how to get a list of all networks currently deployed in your account within the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudNetworks ORD
+ This example shows how to get a list of all networks deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+
+ PS C:\Users\mitch.robins> Get-CloudNetworks ORD
+ 
+Network Name Network ID                          
+------------ ----------                          
+pstest       191d3959-331e-4e29-a5f7-a8c0619123df
+pstest1      dfc46217-942a-4609-98b4-ed916df8547f
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
+
+
+}#>
+
 function Add-CloudNetwork {
     
     Param(
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudNetworkLabel,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudNetworkCIDR,
-        [Parameter(Position=2,Mandatory=$true)]
         [string]$Region
         )
 
-        ## Setting variables needed to execute this function
-        Set-Variable -Name NewNetURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+    ## Setting variables needed to execute this function
+    Get-URI cloudNetworks $Region
+    $URI = "$URL$networksURI"
 
-        Get-AuthToken
-
-[xml]$NewCloudNetXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<network
-  cidr="'+$CloudNetworkCIDR+'"
-  label="'+$CloudNetworkLabel+'"
-/>'
+    $Body = '{
+    "network": 
+    {
+        "name": "'+$CloudNetworkLabel+'",
+        "shared": false,
+        "tenant_id": "'+$CloudDDI+'"
+    }
+}'
  
  if ($RegionList -contains $Region) {
         
-        $NewCloudNet = Invoke-RestMethod -Uri $NewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-        [xml]$NewCloudNetInfo = $NewCloudNet.innerxml
+        Get-AuthToken
+        
+        Add-APIRequest $URI $Body -ErrorAction Stop
 
         Write-Host "You have just created the following cloud network:"
 
-        $NewCloudNetInfo.network
+        $Response.network
 
         }
 
@@ -2350,13 +2487,14 @@ function Remove-CloudNetwork {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name DelNetURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2/$CloudNetworkID.xml"
-
-        Get-AuthToken
+        Get-URI cloudNetworks $Region
+        $URI = "$URL$networksURI/$CloudNetworkID"
 
  if ($RegionList -contains $Region) {
+
+        Get-AuthToken
         
-        $DelCloudNet = Invoke-RestMethod -Uri $DelNetURI -Headers $HeaderDictionary -Method DELETE
+        Remove-APIRequest $URI
 
         Write-Host "The cloud network has been deleted."
 
