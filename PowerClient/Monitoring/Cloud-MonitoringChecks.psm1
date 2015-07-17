@@ -1,4 +1,4 @@
-﻿function Add-CloudMonitoringEntityCheck {
+﻿function Add-CloudMonitoringCheck {
     param (
         [Parameter(Position=0, Mandatory=$true)]
         [string] $type,
@@ -40,7 +40,7 @@
 
 }
 
-function Convert-CloudMonitoringEntityCheckParameters {
+function Convert-CloudMonitoringCheckParameters {
     param (
         [Parameter(Position=0, Mandatory=$true)]
         [string] $type,
@@ -84,7 +84,7 @@ function Convert-CloudMonitoringEntityCheckParameters {
     return (ConvertTo-Json $body)
 }
 
-function Delete-CloudMonitoringEntityCheck {
+function Delete-CloudMonitoringCheck {
     param (
         [Parameter(Position=0, Mandatory=$false)]
         [string] $checkTypeId
@@ -99,7 +99,7 @@ function Delete-CloudMonitoringEntityCheck {
     }
 }
 
-function Get-CloudMonitoringEntityCheck {
+function Get-CloudMonitoringCheck {
     param (
         [Parameter(Position=0, Mandatory=$true)]
         [string] $entityId,
@@ -119,7 +119,7 @@ function Get-CloudMonitoringEntityCheck {
     return $results
 }
 
-function Get-CloudMonitoringEntityChecks {
+function Get-CloudMonitoringChecks {
     param (
         [Parameter(Mandatory=$true)]
         [string] $entityId
@@ -146,7 +146,7 @@ function Get-CloudMonitoringEntityChecks {
 #>
 }
 
-function Get-CloudMonitoringEntityCheckTypes {
+function Get-CloudMonitoringCheckTypes {
     param (
         [Parameter(Position=0, Mandatory=$false)]
         [string] $checkTypeId
