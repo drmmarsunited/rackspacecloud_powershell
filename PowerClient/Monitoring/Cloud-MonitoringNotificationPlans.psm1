@@ -89,7 +89,7 @@ function Update-CloudMonitoringNotificationPlan {
     param (
         [Parameter(Mandatory=$true)]
         [string] $notificationPlanId,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
         [string[]] $criticalState,

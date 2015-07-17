@@ -163,11 +163,11 @@ function Update-CloudMonitoringNotification {
     param (
         [Parameter(Mandatory=$true)]
         [string] $notificationId,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $details,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $label,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $type,
         [Parameter(Mandatory=$false)]
         [Object] $metadata

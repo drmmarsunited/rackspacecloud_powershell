@@ -276,7 +276,7 @@ function Test-CloudMonitoringCheckInline {
 
 function Update-CloudMonitoringCheck {
     param (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter(Position=0, Mandatory=$false)]
         [string] $type,
         [Parameter(Position=1, Mandatory=$false)]
         [Object] $details,

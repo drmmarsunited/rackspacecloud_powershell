@@ -131,7 +131,7 @@ function Update-CloudMonitoringAlaram {
         [string] $alarmId,
         [Parameter(Mandatory=$true)]
         [string] $checkId,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $notificationPlanId,
         [Parameter(Mandatory=$false)]
         [string] $criteria,
