@@ -3,7 +3,7 @@
 #
 
 #Create the variables the functions below use.
-Set-Variable -Name identityURI -Scope Script -Value 'https://identity.api.rackspacecloud.com/v2.0/tokens.xml'
+Set-Variable -Name identityURI -Scope Script -Value 'https://identity.api.rackspacecloud.com/v2.0/tokens'
 Set-Variable -Name authBody -Scope Script -Value "{{`"auth`":{{`"RAX-KSKEY:apiKeyCredentials`":{{`"username`":`"{0}`", `"apiKey`":`"{1}`"}}}}}}"
 
 
@@ -27,15 +27,16 @@ function Get-ProviderURI {
 
 function Get-ProviderMonitoringURI {
     param (
-        [Parameter(Position=0,Mandatory=$true)
-        [xml] $accessToken
+        [Parameter(Position=0,Mandatory=$true)]
+        [Object] $accessToken
     )
     
-    $endpoint = $accessToken.access.serviceCatalog.service |where {$_.type -match 'rax:monitor'}
+    $endpoint = $accessToken.access.serviceCatalog |where {$_.name -match 'cloudMonitoring'} |select endpoints
+    
 
-    if(-not $endpoint) {throw [System.IO.IOException] "Could not find a valid monitoring endpoint"
+    if(-not $endpoint) {throw [System.IO.IOException] "Could not find a valid monitoring endpoint"}
 
-    return $endpoint.endpoint.publicURL
+    return $endpoint.endpoints.publicURL
 
 <#
     .SYNOPSIS
