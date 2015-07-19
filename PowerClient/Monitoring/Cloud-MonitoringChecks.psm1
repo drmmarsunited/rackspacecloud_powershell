@@ -9,7 +9,7 @@
         [Parameter(Position=3, Mandatory=$false)]
         [boolean] $label,
         [Parameter(Position=4, Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
         [int] $period,
         [Parameter(Position=6, Mandatory=$false)]
@@ -26,7 +26,17 @@
     )
 
     Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value ( `
+    Set-Variable -Name jsonBody -Scope Private -Value $null
+    
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = ( `
         Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )
@@ -51,7 +61,7 @@ function Convert-CloudMonitoringCheckParameters {
         [Parameter(Position=3, Mandatory=$false)]
         [boolean] $label,
         [Parameter(Position=4, Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
         [int] $period,
         [Parameter(Position=6, Mandatory=$false)]
@@ -200,7 +210,7 @@ function Test-AddCloudMonitoringCheck {
         [Parameter(Position=3, Mandatory=$false)]
         [boolean] $label,
         [Parameter(Position=4, Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
         [int] $period,
         [Parameter(Position=6, Mandatory=$false)]
@@ -219,12 +229,22 @@ function Test-AddCloudMonitoringCheck {
     )
 
     Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value ( `
+    Set-Variable -Name jsonBody -Scope Private -Value $null
+    
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = ( `
         Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )
     
-    if($asDebug) { $pviate:checkUri += '?debug'
+    if($asDebug) { $pviate:checkUri += '?debug' }
 
     try {
         Invoke-RestMethod -URI $private:checkUri -Headers (Get-HeaderDictionary) -Body $private:jsonBody -Method Post
@@ -244,7 +264,7 @@ function Test-CloudMonitoringCheckInline {
         [Parameter(Position=3, Mandatory=$false)]
         [boolean] $label,
         [Parameter(Position=4, Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
         [int] $period,
         [Parameter(Position=6, Mandatory=$false)]
@@ -261,7 +281,17 @@ function Test-CloudMonitoringCheckInline {
     )
 
     Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value ( `
+    Set-Variable -Name jsonBody -Scope Private -Value $null
+    
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = ( `
         Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )
@@ -285,7 +315,7 @@ function Update-CloudMonitoringCheck {
         [Parameter(Position=3, Mandatory=$false)]
         [boolean] $label,
         [Parameter(Position=4, Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
         [int] $period,
         [Parameter(Position=6, Mandatory=$false)]
@@ -302,7 +332,17 @@ function Update-CloudMonitoringCheck {
     )
 
     Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value ( `
+    Set-Variable -Name jsonBody -Scope Private -Value $null
+    
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = ( `
         Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )

@@ -29,11 +29,13 @@ function Private-AddCloudMonitoringNotification {
         [Object] $metadata
     )
 
-    Set-Variable -Name metaDataType -Value $metadata.GetType().BaseType.Name
     Set-Variable -Name jsonBody -Value $null
 
-    if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "Oops."
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
         return
     }
 
@@ -174,11 +176,13 @@ function Update-CloudMonitoringNotification {
     )
 
     Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + "/notifications/$notificationId")
-    Set-Variable -Name metaDataType -Value $metadata.GetType().BaseType.Name
     Set-Variable -Name jsonBody -Value $null
 
-    if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "Oops."
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
         return
     }
 

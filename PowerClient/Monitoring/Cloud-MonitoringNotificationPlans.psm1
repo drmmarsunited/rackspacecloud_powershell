@@ -9,11 +9,19 @@ function Add-CloudMonitoringNotificationPlan {
         [Parameter(Mandatory=$false)]
         [string] $okState,
         [Parameter(Mandatory=$false)]
-        [object] $metadata
+        [Object] $metadata
     )
 
     Set-Variable -Name notificationPlanUri -Value ((Get-MonitoringUri) + "/notification_plans" )
     Set-Variable -Name jsonBody -Value $null
+
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
 
     $jsonBody = (Convert-CloudMonitoringNotificationPlan -label $label -criticalState $criticalState -warningState $warningState -okState $okState -metadata $metaData)
 
@@ -35,7 +43,7 @@ function Convert-CloudMonitoringNotificationPlan {
         [Parameter(Mandatory=$false)]
         [string[]] $okState,
         [Parameter(Mandatory=$false)]
-        [object] $metadata
+        [Object] $metadata
     )
 
     $body = New-Object -TypeName PSObject
@@ -98,11 +106,19 @@ function Update-CloudMonitoringNotificationPlan {
         [Parameter(Mandatory=$false)]
         [string[]] $okState,
         [Parameter(Mandatory=$false)]
-        [object] $metadata
+        [Object] $metadata
     )
 
     Set-Variable -Name notificationPlanUri -Value ((Get-MonitoringUri) + "/notification_plans/$notificationPlanId" )
     Set-Variable -Name jsonBody -Value $null
+
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
 
     $jsonBody = (Convert-CloudMonitoringNotificationPlan -label $label -criticalState $criticalState -warningState $warningState -okState $okState -metadata $metaData)
 

@@ -13,14 +13,24 @@ function Add-CloudMonitoringEntity {
         [Parameter (Mandatory=$false)]
         [string] $managed,
         [Parameter (Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter (Mandatory=$false)]
         [string] $uri
     )
 
     Set-Variable -Name entityUri -Scope Private -Value (Get-ClouldMonitoringEntity)
-    Set-Variable -Name jsonBody -Scope Private -Value `
-        (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
+    Set-Variable -Name jsonBody -Scope Private -Value $null
+    
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
+
 
     try {
         Invoke-RestMethod -URI $private:entityURI -Body $private:jsonBody -Headers (Get-HeaderDictionary) -Method POST
@@ -69,7 +79,7 @@ function Convert-ClouldMonitorEntityParameters {
         [Parameter (Mandatory=$false)]
         [boolean] $managed,
         [Parameter (Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter (Mandatory=$false)]
         [string] $uri
     )
@@ -269,14 +279,23 @@ function Update-ClouldMonitoringEntity {
         [Parameter (Mandatory=$false)]
         [string] $managed,
         [Parameter (Mandatory=$false)]
-        [hashtable] $metadata,
+        [Object] $metadata,
         [Parameter (Mandatory=$false)]
         [string] $uri
     )
 
     Set-Variable -Name entityUri -Scope Private -Value (Get-ClouldMonitoringEntity)
-    Set-Variable -Name jsonBody -Scope Private -Value `
-        (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
+    Set-Variable -Name jsonBody -Scope Private -Value $null
+    
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+    
+    $jsonBody = (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
 
     $private:entityUri += "/$entityId"
     try {

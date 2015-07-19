@@ -17,14 +17,26 @@ function Add-CloudMonitoringAlarm {
         [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [hashtable] $metadata
+        [Object] $metadata
     )
 
     Set-Variable -Name alarmURI -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
-    Set-Variable -Name body -Value `
-        (Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
-            -disabled $disabled -label $label -metadata $metadata)
+    Set-Variable -Name jsonBody -Value $null
     Set-Variable -Name result -Value $null
+
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = `
+    (   Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
+            -disabled $disabled -label $label -metadata $metadata
+    )
+    
 
     try {
         $result = (Invoke-RestMethod -Name $alarmUri -Body $body -Headers (Get-HeaderDictionary) -Method Post)
@@ -48,7 +60,7 @@ function Convert-ClouldMonitorAlarmParameters {
         [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [hashtable] $metadata
+        [Object] $metadata
     )
 
     $body = New-Object -TypeName PSObject
@@ -140,7 +152,7 @@ function Update-CloudMonitoringAlaram {
         [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [hashtable] $metadata
+        [Object] $metadata
     )
 
     Set-Variable -Name alarmURI -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
@@ -173,14 +185,25 @@ function Test-AddCloudMonitoringAlarm {
         [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [hashtable] $metadata
+        [Object] $metadata
     )
 
     Set-Variable -Name alarmURI -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
-    Set-Variable -Name body -Value `
-        (Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
-            -disabled $disabled -label $label -metadata $metadata)
+    Set-Variable -Name jsonBody -Value $null
     Set-Variable -Name result -Value $null
+
+    if($metadata) {
+        $metaDataType = $metadata.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
+        Write-Host "The data type passed is not of type Array or Hashtable."
+        return
+    }
+
+    $jsonBody = ( `
+        Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
+            -disabled $disabled -label $label -metadata $metadata
+    )
 
     try {
         $result = (Invoke-RestMethod -Name $alarmUri -Body $body -Headers (Get-HeaderDictionary) -Method PUT)
