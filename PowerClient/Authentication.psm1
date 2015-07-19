@@ -6,7 +6,6 @@ Set-Variable -Name CloudUsername -Scope Script  -Value ""
 Set-Variable -Name CloudAPIKey -Scope Script    -Value ""
 Set-Variable -Name CloudDDI -Scope Script       -Value ""
 Set-Variable -Name accessToken -Scope Script    -Value $null
-Set-Variable -Name responseToken -Scope Script  -Value $null
 Set-Variable -Name headers -Scope Script        -Value $null
 
 
@@ -65,32 +64,24 @@ function Get-HeaderDictionary {
 #>
 }
 
-function Get-ResponseToken {
-    return $script:responseToken
-<#
-
-#>
-}
-
 function Request-AuthToken() {
         
     ## Setting variables needed for function execution
-    Set-Variable -Name AuthURI -Value (Get-AuthURI)
-    Set-Variable -Name AuthBody -Value (Get-AuthBody)
+    Set-Variable -Name AuthURI -Value (Get-IdentityAuthURI)
+    Set-Variable -Name AuthBody -Value (Get-IdentityAuthBody)
 
     try {
-        Set-Variable -Name responseToken -Scope Script -Value (Invoke-RestMethod -Uri $AuthURI -Body $AuthBody -ContentType application/json -Method Post)
+        $script:accessToken = (Invoke-RestMethod -Uri $AuthURI -Body $AuthBody -ContentType application/json -Method Post)
     } catch {
         #Figure out how to handle the error (e.g. incorrect login) gracefully.
         Write-Error "Reach the error message. Figure out how to handle this gracefully"
     }
 
-    $script:accessTokenId = $script:responseToken.access.token.id
+    $accessTokenId = $script:accessToken.access.token.id
 
     ## Headers in powershell need to be defined as a dictionary object, so here I'm creating a dictionary object with the newly granted token. It's global, as it's needed in every future request.
     Set-Variable -Name headers -Scope Script -Value (new-object "System.Collections.Generic.Dictionary``2[[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]")
-    $script:headers.Add("X-Auth-Token", $script:accessTokenId)
-
+    $script:headers.Add("X-Auth-Token", $accessTokenId)
 <#
     .SYNOPSIS
     Requests a new token.
@@ -145,7 +136,7 @@ function Set-AccountAuthentication
 
 function Test-AccessToken {
     ## Check for current authentication token and retrieves a new one if needed
-    if ((Get-Date) -ge $responseToken.access.token.expires) {
+    if ((Get-Date) -ge $script:accessToken.access.token.expires) {
         Write-Verbose "Token invalid or expired. Aquiring new token."
         Request-AuthToken
     }
