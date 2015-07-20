@@ -35,7 +35,7 @@ PowerShellVersion = '3.0'
 # PowerShellHostVersion = ''
 
 # Minimum version of the .NET Framework required by this module
-DotNetFrameworkVersion = '1.1'
+DotNetFrameworkVersion = '2.0'
 
 # Minimum version of the common language runtime (CLR) required by this module
 # CLRVersion = ''

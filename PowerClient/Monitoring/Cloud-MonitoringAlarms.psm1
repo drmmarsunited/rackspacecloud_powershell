@@ -104,15 +104,16 @@ function Get-CloudMonitoringAlarms {
     )
 
     Set-Variable -Name alarmUri -Value (Get-IdentityMonitoringAlarmURI)
+    Set-Variable -Name alarmIdArray -Value $null
     Set-Variable -Name results -Value $null
     
-    if($alarmId.Length) {
-        Set-Variable -Name iterator -Value 1
-        
-        $alarmUri += "?id=${alarmId[$iterator]}"
+    if($alarmId) {
+        $alarmIdArray = [System.Collections.Generic.List[System.Object]] $alarmId
+        $alarmUri += "?id=${$alarmIdArray.Item(0)}"
+        $alarmIdArray.RemoveAt(0)
 
-        for($iterator, $iterator -lt $alarm.Length, $iterator++) {
-            $alarmUri += "&id=${alarmId[$iterator]}"
+        foreach($a in $alarmIdArray) {
+            $alarmUri += "&$a"
         }
     }
 

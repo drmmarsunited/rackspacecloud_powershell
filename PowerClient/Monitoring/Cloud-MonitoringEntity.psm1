@@ -163,41 +163,45 @@ function Delete-CloudMonitoringEntity {
 function Get-CloudMonitoringEntities {
     param (
         [Parameter (Mandatory=$false)]
-        [string[]] $agent_id,
+        [string[]] $agentId,
         [Parameter (Mandatory=$false)]
         [string[]] $id
     )
     
     Set-PSDebug -Strict
 
-    Set-Variable -Name entityURI -Scope Private -Value (Get-ClouldMonitoringEntity)
-    Set-Variable -Name result -Scope Private -Value $null
-    Set-Variable -Name appendToURI -Scope Private -Value $false
+    Set-Variable -Name entityURI -Value (Get-ClouldMonitoringEntity)
+    Set-Variable -Name appendToURI -Value $false
+    Set-Variable -Name workingArrayList -Value $null
+    Set-Variable -Name result -Value $null
 
-    if($agent_id -or $id) { $private:entityURI += '?' }
+    if($agentId) {
+        $appendToURI = $true
 
-    if($agent_id) {
-        foreach ($a in $agent_id) {
-            if($private:appendToURI) {$private:entityURI += '&'}
+        $workingArrayList = [System.Collections.Generic.List[System.Object]] $agentId
+        $entityURI += "?agent_id${workingArrayList.Item(0)}"
+        $workingArrayList.RemoveAt(0)
 
-            $private:entityURI += "agent_id=$a"
-            $private:appendToURI = $true
+        foreach($w in $workingArrayList) {
+            $entityURI += "&agent_id=$w"
         }
     }
+    elseif($id) {
+        $workingArrayList = [System.Collections.Generic.List[System.Object]] $id
 
-    if($id) {
-        foreach ($i in $id) {
-            if($appendToURI) {$private:entityURI += '&'}
+        if(-not $appendToURI) { 
+            $entityURI += "?id=${workingArrayList.Item(0)}"
+            $workingArrayList.RemoveAt(0)
+        }
 
-            $private:entityURI += "id=$i"
-            $private:appendToURI = $true
+        foreach($w in $workingArrayList) {
+            $entityURI += "&id=$w"
         }
     }
-
 
     Write-Verbose 'Using String: ' + $private:entityURI
     try {
-        $private:result = (Invoke-RestMethod -URI $private:entityURI -Headers (Get-HeaderDictionary))
+        $result = (Invoke-RestMethod -URI $private:entityURI -Headers (Get-HeaderDictionary))
     } catch {
         Write-Host -ForegroundColor Red "Generic Error Message"
     } finally {
@@ -215,7 +219,7 @@ function Get-CloudMonitoringEntities {
     RestMethod request to return the list of entities. Depending on the parameters passed in, the entities can
     be filtered based off the agent and/or id.
     
-    .PARAMETER agent_id
+    .PARAMETER agentId
     Array of strings representing the filter parameters.
 
     .PARAMETER id
