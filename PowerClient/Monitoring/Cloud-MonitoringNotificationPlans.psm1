@@ -12,7 +12,7 @@ function Add-CloudMonitoringNotificationPlan {
         [Object] $metadata
     )
 
-    Set-Variable -Name notificationPlanUri -Value ((Get-MonitoringUri) + "/notification_plans" )
+    Set-Variable -Name notificationPlanUri -Value ((Get-IdentityMonitoringURI) + "/notification_plans" )
     Set-Variable -Name jsonBody -Value $null
 
     if($metadata) {
@@ -63,7 +63,7 @@ function Get-CloudMonitoringNotificationPlan {
         [string []] $notificationPlanId
     )
 
-    Set-Variable -Name notificationPlanUri -Value ((Get-MonitoringUri) + "/notification_plans" )
+    Set-Variable -Name notificationPlanUri -Value ((Get-IdentityMonitoringURI) + "/notification_plans" )
     Set-Variable -Name notificationPlanArray -Value $null
     Set-Variable -Name result -Value $null
 
@@ -109,7 +109,7 @@ function Update-CloudMonitoringNotificationPlan {
         [Object] $metadata
     )
 
-    Set-Variable -Name notificationPlanUri -Value ((Get-MonitoringUri) + "/notification_plans/$notificationPlanId" )
+    Set-Variable -Name notificationPlanUri -Value ((Get-IdentityMonitoringURI) + "/notification_plans/$notificationPlanId" )
     Set-Variable -Name jsonBody -Value $null
 
     if($metadata) {
@@ -135,7 +135,7 @@ function Delete-CloudMonitoringNotificationPlan {
         [string] $notificationPlanId
     )
 
-    Set-Variable -Name notificationPlanUri -Value ((Get-MonitoringUri) + "/notification_plans/$notificationPlanId" )
+    Set-Variable -Name notificationPlanUri -Value ((Get-IdentityMonitoringURI) + "/notification_plans/$notificationPlanId" )
 
     try {
         Invoke-RestMethod -URI notificationPlanUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method DELETE

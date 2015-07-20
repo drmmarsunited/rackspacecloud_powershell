@@ -18,7 +18,7 @@ function Add-CloudMonitoringEntity {
         [string] $uri
     )
 
-    Set-Variable -Name entityUri -Scope Private -Value (Get-ClouldMonitoringEntity)
+    Set-Variable -Name entityUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities")
     Set-Variable -Name jsonBody -Scope Private -Value $null
     
     if($metadata) {
@@ -129,13 +129,12 @@ function Delete-CloudMonitoringEntity {
         [string] $entityId
     )
 
-    Set-Variable -Name entityURI -Scope Private -Value (Get-ClouldMonitoringEntity)
+    Set-Variable -Name entityURI -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId")
     
-    $private:entityURI += "/$entityId"
-    Write-Verbose 'Using String: ' + $private:entityURI
+    Write-Verbose 'Using String: ' + $entityURI
     
     try {
-        $private:result = (Invoke-RestMethod -URI $private:entityURI -Headers (Get-HeaderDictionary) -Method Delete)
+        $result = (Invoke-RestMethod -URI $entityURI -Headers (Get-HeaderDictionary) -Method Delete)
         Write-Host "Entity deleted successfully"
     } catch {
         Write-Host "Generic Error Message"
@@ -170,7 +169,7 @@ function Get-CloudMonitoringEntities {
     
     Set-PSDebug -Strict
 
-    Set-Variable -Name entityURI -Value (Get-ClouldMonitoringEntity)
+    Set-Variable -Name entityURI -Value ((Get-IdentityMonitoringURI) + "/entities")
     Set-Variable -Name appendToURI -Value $false
     Set-Variable -Name workingArrayList -Value $null
     Set-Variable -Name result -Value $null
@@ -199,9 +198,9 @@ function Get-CloudMonitoringEntities {
         }
     }
 
-    Write-Verbose 'Using String: ' + $private:entityURI
+    Write-Verbose 'Using String: ' + $entityURI
     try {
-        $result = (Invoke-RestMethod -URI $private:entityURI -Headers (Get-HeaderDictionary))
+        $result = (Invoke-RestMethod -URI $entityURI -Headers (Get-HeaderDictionary))
     } catch {
         Write-Host -ForegroundColor Red "Generic Error Message"
     } finally {
@@ -288,7 +287,7 @@ function Update-ClouldMonitoringEntity {
         [string] $uri
     )
 
-    Set-Variable -Name entityUri -Scope Private -Value (Get-ClouldMonitoringEntity)
+    Set-Variable -Name entityUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId")
     Set-Variable -Name jsonBody -Scope Private -Value $null
     
     if($metadata) {

@@ -16,7 +16,7 @@
         [string[]] $notificationPlans
     )
 
-    Set-Variable -Name suppressionUri -Value ((Get-MonitoringUri) + '/suppressions​')
+    Set-Variable -Name suppressionUri -Value ((Get-IdentityMonitoringURI) + '/suppressions​')
     Set-Variable -Name suppressionBody -Value `
         (Convert-CloudMonitoringSuppression -label $label -alarms $alarms -checks $checks -entities $entities `
             -startTime $startTime -endTime $endTime -notificationPlans $notificationPlans)
@@ -63,7 +63,7 @@ function Delete-CloudMonitoringSuppression {
     [Parameter(Mandatory=$true)]
     [string] $suppressionId
 
-    Set-Variable -Name suppressionUri -Value ((Get-MonitoringUri) + '/suppressions​/$suppressionId')
+    Set-Variable -Name suppressionUri -Value ((Get-IdentityMonitoringURI) + "/suppressions​/$suppressionId")
 
     try {
         Invoke-RestMethod -Uri $suppressionUri -Headers (Get-HeaderDictionary) -Method Delete
@@ -78,7 +78,7 @@ function Get-CloudMonitoringSuppression {
         [string[]] $suppressionId,
     )
 
-    Set-Variable -Name suppressionUri -Value ((Get-MonitoringUri) + '/suppressions​')
+    Set-Variable -Name suppressionUri -Value ((Get-IdentityMonitoringURI) + '/suppressions​')
     Set-Variable -Name suppressionArray -Value $null
     Set-Variable -Name result -Value $null
 
@@ -105,7 +105,7 @@ function Get-CloudMonitoringSuppression {
 function Get-CloudMonitoringSuppressionLogs {
     param ()
 
-    Set-Variable -Name suppressionUri -Value ((Get-MonitoringUri) + '/suppression_logs')
+    Set-Variable -Name suppressionUri -Value ((Get-IdentityMonitoringURI) + '/suppression_logs')
 
     try {
         Invoke-RestMethod -URI $suppressionUri -Headers (Get-HeaderDictionary)
@@ -140,7 +140,7 @@ function Update-CloudMonitoringSuppression {
         [string[]] $notification_plans 	
     )
 
-    Set-Variable -Name suppressionUri -Value ((Get-MonitoringUri) + "/suppressions​/$suppressionId")
+    Set-Variable -Name suppressionUri -Value ((Get-IdentityMonitoringURI) + "/suppressions​/$suppressionId")
     Set-Variable -Name suppressionBody -Value `
         (Convert-CloudMonitoringSuppression -label $label -alarms $alarms -checks $checks -entities $entities `
             -startTime $startTime -endTime $endTime -notificationPlans $notificationPlans)

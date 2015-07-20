@@ -1,10 +1,11 @@
-#
+﻿#
 # Function for interacting with Cloud Monitoring Alarms
 #
 
 function Add-CloudMonitoringAlarm {
     param (
         [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $entityId,
         [Parameter(Mandatory=$true)]
         [string] $checkId,
@@ -20,7 +21,7 @@ function Add-CloudMonitoringAlarm {
         [Object] $metadata
     )
 
-    Set-Variable -Name alarmURI -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
+    Set-Variable -Name alarmURI -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms")
     Set-Variable -Name jsonBody -Value $null
     Set-Variable -Name result -Value $null
 
@@ -66,7 +67,7 @@ function Convert-ClouldMonitorAlarmParameters {
     $body = New-Object -TypeName PSObject
 
     if($checkId) { $body | Add-Member -MemberType NoteProperty -Name check_id -Value $checkId }
-    if($notificationPlanId) { $body | Add-Member -MemberType NoteProperty -Name notification_plan_id 	 -Value $notificationPlanId }
+    if($notificationPlanId) { $body | Add-Member -MemberType NoteProperty -Name notification_plan_id -Value $notificationPlanId }
     if($criteria) { $body | Add-Member -MemberType NoteProperty -Name criteria -Value $criteria }
     if($disabled) { $body | Add-Member -MemberType NoteProperty -Name disabled -Value $disabled }
     if($label) { $body | Add-Member -MemberType NoteProperty -Name label -Value $label }
@@ -81,12 +82,14 @@ function Convert-ClouldMonitorAlarmParameters {
 function Delete-CloudMonitoringAlarm {
     param (
         [Parameter(Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $entityId,
         [Parameter(Position=1, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $alarmId
     )
 
-    Set-Variable -Name alarmUri -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
+    Set-Variable -Name alarmUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms/$alarmId")
     
     try {
         Invoke-RestMethod -URI $private:alarmUri -Headers (Get-HeaderDictionary) -Method Delete
@@ -98,12 +101,13 @@ function Delete-CloudMonitoringAlarm {
 function Get-CloudMonitoringAlarms {
     param (
         [Parameter(Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $entityId,
         [Parameter(Position=1, Mandatory=$false)]
         [string[]] $alarmId
     )
 
-    Set-Variable -Name alarmUri -Value (Get-IdentityMonitoringAlarmURI)
+    Set-Variable -Name alarmUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms"​)
     Set-Variable -Name alarmIdArray -Value $null
     Set-Variable -Name results -Value $null
     
@@ -130,6 +134,7 @@ function Get-CloudMonitoringAlarms {
 function Get-CloudMonitoringAlarms {
     param (
         [Parameter(Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $entityId
     )
 
@@ -139,8 +144,10 @@ function Get-CloudMonitoringAlarms {
 function Update-CloudMonitoringAlaram {
     param (
         [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $entityId,
         [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $alarmId,
         [Parameter(Mandatory=$true)]
         [string] $checkId,
@@ -156,7 +163,7 @@ function Update-CloudMonitoringAlaram {
         [Object] $metadata
     )
 
-    Set-Variable -Name alarmURI -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
+    Set-Variable -Name alarmURI -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms/$alarmId")
     Set-Variable -Name body -Value `
         (Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
             -disabled $disabled -label $label -metadata $metadata)
@@ -189,7 +196,7 @@ function Test-AddCloudMonitoringAlarm {
         [Object] $metadata
     )
 
-    Set-Variable -Name alarmURI -Scope Private -Value (Get-IdentityMonitoringAlarmURI)
+    Set-Variable -Name alarmURI -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/test-alarm")
     Set-Variable -Name jsonBody -Value $null
     Set-Variable -Name result -Value $null
 

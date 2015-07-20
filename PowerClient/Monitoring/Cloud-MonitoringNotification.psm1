@@ -10,7 +10,7 @@ function Add-CloudMonitoringNotification {
         [Object] $metadata
     )
 
-    Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + "/notifications")
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications")
 
     return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
 }
@@ -76,7 +76,7 @@ function Delete-CloudMonitoringNotification {
         [string] $notificationId
     )
 
-    Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + "/notifications/$notificationId")
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications/$notificationId")
     
     try {
         Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary) -Method DELETE
@@ -91,7 +91,7 @@ function Get-CloudMonitoringNotification {
         [string[]] $notificationId
     )
 
-    Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + '/notifications')
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + '/notifications')
     Set-Variable -Name notificationArray -Value $null
     Set-Variable -Name result -Value $null
 
@@ -141,7 +141,7 @@ function Test-AddCloudMonitoringNotification {
         [Object] $metadata
     )
 
-    Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + "/test-notification")
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/test-notification")
 
     return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
 }
@@ -152,7 +152,7 @@ function Test-CloudMonitoringNotification {
         [string] $notificationId
     )
 
-    Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + "/$notificationId/test")
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/$notificationId/test")
 
     try {
         Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary)
@@ -175,7 +175,7 @@ function Update-CloudMonitoringNotification {
         [Object] $metadata
     )
 
-    Set-Variable -Name notificationUri -Value ((Get-MonitoringUri) + "/notifications/$notificationId")
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications/$notificationId")
     Set-Variable -Name jsonBody -Value $null
 
     if($metadata) {

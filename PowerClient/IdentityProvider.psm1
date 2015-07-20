@@ -42,7 +42,7 @@ function Get-IdentityAuthURI {
 #>
 }
 
-function Get-MonitoringURI {
+function Get-IdentityMonitoringURI {
     return (Get-ProviderMonitoringURI -accessToken (Get-AccessToken))
 
 <#

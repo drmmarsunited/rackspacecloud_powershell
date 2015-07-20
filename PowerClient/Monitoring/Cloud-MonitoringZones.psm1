@@ -64,16 +64,16 @@ function Get-CloudMonitoringZoneHelper {
         [string] zoneId = $null
     )
 
-    Set-Variable -Name cloudMonitoringURI -Scope Private -Value 'https://monitoring.api.rackspacecloud.com/v1.0/899043/monitoring_zones'
-    Set-Variable -Name result -Scope Private -Value $null
+    Set-Variable -Name cloudMonitoringURI -Value ((Get-IdentityMonitoringURI) + "/monitoring_zones")
+    Set-Variable -Name result -Value $null
     
-    if($zoneId) { $private:cloudMonitoringURI += '/' + $zoneId }
+    if($zoneId) { $cloudMonitoringURI += '/' + $zoneId }
     
     Get-AccessToken | Out-Null
-    $private:result = Invoke-RestMethod -URI $private:cloudMonitoringURI -Headers (Get-HeaderDictionary)
+    $result = Invoke-RestMethod -URI $cloudMonitoringURI -Headers (Get-HeaderDictionary)
 
-    if($zoneId) { return $private:result }
-    return $private:result.values
+    if($zoneId) { return $result }
+    return $result.values
 
 <#
     .SYNOPSIS
@@ -90,27 +90,29 @@ function Get-CloudMonitoringZoneHelper {
 function Trace-FromCloudMonitoringZone {
     param (
         [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $zoneId,
         [Parameter (Position=1, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $target,
         [Parameter (Position=2, Mandatory=$false)]
         [ValidateSet("IPv4", "IPv6")]
         [string] $resolver = "IPv4"
     )
 
-    Set-Variable -Name cloudMonitoringURI -Scope Private -Value (Get-MonitoringURI $zoneId)
-    Set-Variable -Name traceRequestBody -Scope Private -Value `
+    Set-Variable -Name cloudMonitoringURI -Value ((Get-IdentityMonitoringURI) + "/monitoring_zones/$zoneId/traceroute")
+    Set-Variable -Name traceRequestBody -Value `
         @{
             target="$target" 
             target_resolver="$resolver" 
         }
     
-    $private:traceRequestBody = (ConvertTo-Json $private:traceRequestBody)
+    $traceRequestBody = (ConvertTo-Json $traceRequestBody)
 
     Get-AccessToken |Out-Null
 
     try {
-        Invoke-RestMethod -Uri $private:cloudMonitoringURI -Body $private:traceRequestBody -Headers (Get-HeaderDictionary) -ContentType application/json -Method Post
+        Invoke-RestMethod -Uri $cloudMonitoringURI -Body $traceRequestBody -Headers (Get-HeaderDictionary) -ContentType application/json -Method Post
     } catch {
         Write-Error "Generic Error message that needs to be fixed here"
     }

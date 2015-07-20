@@ -1,5 +1,8 @@
 ﻿function Add-CloudMonitoringCheck {
     param (
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId
         [Parameter(Position=0, Mandatory=$true)]
         [string] $type,
         [Parameter(Position=1, Mandatory=$false)]
@@ -25,8 +28,8 @@
         [string] $target_resolver,
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value $null
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks")
+    Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
         $metaDataType = $metadata.GetType().BaseType.Name
@@ -42,7 +45,7 @@
     )
     
     try {
-        Invoke-RestMethod -URI $private:checkUri -Headers (Get-HeaderDictionary) -Body $private:jsonBody -Method Post
+        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $jsonBody -Method Post
     } catch {
         Write-Host "Useful Error message here"
     }
@@ -96,11 +99,15 @@ function Convert-CloudMonitoringCheckParameters {
 
 function Delete-CloudMonitoringCheck {
     param (
-        [Parameter(Position=0, Mandatory=$false)]
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
+        [Parameter(Position=1, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $checkTypeId
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringCheckType)
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
     
     try {
         Invoke-RestMethod -Uri checkUri -Headers (Get-HeaderDictionary) -Method Delete
@@ -111,13 +118,14 @@ function Delete-CloudMonitoringCheck {
 
 function Get-CloudMonitoringCheck {
     param (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
         [string] $entityId,
-        [Parameter(Position=1, Mandatory=$false)]
+        [Parameter(Position=0, Mandatory=$false)]
         [string] $checkTypeId
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
+    Set-Variable -Name checkUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
     Set-Variable -Name results -Scope Private -Value $null
 
     try {
@@ -131,8 +139,9 @@ function Get-CloudMonitoringCheck {
 
 function Get-CloudMonitoringChecks {
     param (
-        [Parameter(Mandatory=$true)]
-        [string] $entityId
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
     )
 
     return (Get-CloudMonitoringEntityCheck -entityId $entityId).values
@@ -162,19 +171,19 @@ function Get-CloudMonitoringCheckTypes {
         [string] $checkTypeId
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringCheckType)
-    Set-Variable -Name results -Scope Private -Value $null
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/check_types/$checkTypeId")
+    Set-Variable -Name results -Value $null
 
-    if($checkTypeId) { $private:checkUri += "/$checkTypeId" }
+    if($checkTypeId) { $checkUri += "/$checkTypeId" }
 
     try {
-        $private:results = (Invoke-RestMethod -Uri checkUri -Headers (Get-HeaderDictionary))
+        $results = (Invoke-RestMethod -Uri checkUri -Headers (Get-HeaderDictionary))
     } catch {
 
     }
 
-    if(-not $private:results) { $private:reuslts = $private:reuslts.values }
-    return $private:results
+    if(-not $results) { $reuslts = $reuslts.values }
+    return $results
 
 <#
     .SYNOPSIS
@@ -201,19 +210,22 @@ function Get-CloudMonitoringCheckTypes {
 
 function Test-AddCloudMonitoringCheck {
     param (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
+        [Parameter(Position=1, Mandatory=$true)]
         [string] $type,
-        [Parameter(Position=1, Mandatory=$false)]
-        [Object] $details,
         [Parameter(Position=2, Mandatory=$false)]
-        [boolean] $disabled,
+        [Object] $details,
         [Parameter(Position=3, Mandatory=$false)]
-        [boolean] $label,
+        [boolean] $disabled,
         [Parameter(Position=4, Mandatory=$false)]
-        [Object] $metadata,
+        [boolean] $label,
         [Parameter(Position=5, Mandatory=$false)]
-        [int] $period,
+        [Object] $metadata,
         [Parameter(Position=6, Mandatory=$false)]
+        [int] $period,
+        [Parameter(Position=7, Mandatory=$false)]
         [int] $timeout,
         [Parameter(Mandatory=$false)]
         [string[]] $monitoring_zones_poll,
@@ -228,8 +240,8 @@ function Test-AddCloudMonitoringCheck {
         [boolean] $asDebug
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value $null
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/test-check")
+    Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
         $metaDataType = $metadata.GetType().BaseType.Name
@@ -247,7 +259,7 @@ function Test-AddCloudMonitoringCheck {
     if($asDebug) { $pviate:checkUri += '?debug' }
 
     try {
-        Invoke-RestMethod -URI $private:checkUri -Headers (Get-HeaderDictionary) -Body $private:jsonBody -Method Post
+        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $jsonBody -Method Post
     } catch {
         Write-Host "Useful Error message here"
     }
@@ -255,19 +267,25 @@ function Test-AddCloudMonitoringCheck {
 
 function Test-CloudMonitoringCheckInline {
         param (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
+        [Parameter(Position=1, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $checkTypeId,
+        [Parameter(Position=2, Mandatory=$true)]
         [string] $type,
-        [Parameter(Position=1, Mandatory=$false)]
-        [Object] $details,
-        [Parameter(Position=2, Mandatory=$false)]
-        [boolean] $disabled,
         [Parameter(Position=3, Mandatory=$false)]
-        [boolean] $label,
+        [Object] $details,
         [Parameter(Position=4, Mandatory=$false)]
-        [Object] $metadata,
+        [boolean] $disabled,
         [Parameter(Position=5, Mandatory=$false)]
-        [int] $period,
+        [boolean] $label,
         [Parameter(Position=6, Mandatory=$false)]
+        [Object] $metadata,
+        [Parameter(Position=7, Mandatory=$false)]
+        [int] $period,
+        [Parameter(Position=8, Mandatory=$false)]
         [int] $timeout,
         [Parameter(Mandatory=$false)]
         [string[]] $monitoring_zones_poll,
@@ -280,7 +298,7 @@ function Test-CloudMonitoringCheckInline {
         [string] $target_resolver
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
+    Set-Variable -Name checkUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId/test")
     Set-Variable -Name jsonBody -Scope Private -Value $null
     
     if($metadata) {
@@ -306,6 +324,12 @@ function Test-CloudMonitoringCheckInline {
 
 function Update-CloudMonitoringCheck {
     param (
+        [Parameter (Position=1, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
+        [Parameter(Position=2, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $checkTypeId,
         [Parameter(Position=0, Mandatory=$false)]
         [string] $type,
         [Parameter(Position=1, Mandatory=$false)]
@@ -331,8 +355,8 @@ function Update-CloudMonitoringCheck {
         [string] $target_resolver
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value (Get-IdentityMonitoringEntityCheckURI)
-    Set-Variable -Name jsonBody -Scope Private -Value $null
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
+    Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
         $metaDataType = $metadata.GetType().BaseType.Name
@@ -348,7 +372,7 @@ function Update-CloudMonitoringCheck {
     )
 
     try {
-        Invoke-RestMethod -URI $private:checkUri -Headers (Get-HeaderDictionary) -Body $private:jsonBody -Method Put
+        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $jsonBody -Method Put
     } catch {
         Write-Host "Useful Error message here"
     }
