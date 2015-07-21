@@ -4,7 +4,7 @@
 # Developer Note: 
 # I am not sure if this is the best idea for this, but I'd like to abstract this outside of
 # other functions should the API significantly change and/or other OpenStack providers send
-# a radically different response token. Building for simplicity now and will abstratc later.
+# a radically different response token.
 #
 
 #-------------------------------------------------------------------------------------------
@@ -32,7 +32,6 @@ function Get-IdentityAuthURI {
     return (Get-ProviderURI)
 
 <#
-
     .SYNOPSIS
     Returns the URI to use for authentication against the OpenStack provider's API.
 

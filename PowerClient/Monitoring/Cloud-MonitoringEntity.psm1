@@ -18,8 +18,8 @@ function Add-CloudMonitoringEntity {
         [string] $uri
     )
 
-    Set-Variable -Name entityUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities")
-    Set-Variable -Name jsonBody -Scope Private -Value $null
+    Set-Variable -Name entityUri -Value ((Get-IdentityMonitoringURI) + "/entities")
+    Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
         $metaDataType = $metadata.GetType().BaseType.Name
@@ -31,11 +31,12 @@ function Add-CloudMonitoringEntity {
 
     $jsonBody = (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
 
-
+    Write-Debug "URI: `"$entityUri`""
+    Write-Debug "JSON Body: $jsonBody"
     try {
-        Invoke-RestMethod -URI $private:entityURI -Body $private:jsonBody -Headers (Get-HeaderDictionary) -Method POST
+        Invoke-RestMethod -URI $entityURI -Body $jsonBody -Headers (Get-HeaderDictionary) -Method POST
     } catch {
-        Write-Host "Generic Error Message"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
 <#
     .SYNOPSIS
@@ -58,7 +59,7 @@ function Add-CloudMonitoringEntity {
     Indicate if the entity is managed.
 
     .PARAMETER metadata
-    A hashtable with the metadata values
+    An array or hashtable with the metadata values
 
     .PARAMETER uri
     The URI for the entity.
@@ -115,7 +116,7 @@ function Convert-ClouldMonitorEntityParameters {
     Indicate if the entity is managed.
 
     .PARAMETER metadata
-    A hashtable with the metadata values
+    An array or hashtable with the metadata values
 
     .PARAMETER uri
     The URI for the entity.
@@ -131,13 +132,12 @@ function Delete-CloudMonitoringEntity {
 
     Set-Variable -Name entityURI -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId")
     
-    Write-Verbose 'Using String: ' + $entityURI
-    
+    Write-Debug "URI: `"$entityURI`""
     try {
         $result = (Invoke-RestMethod -URI $entityURI -Headers (Get-HeaderDictionary) -Method Delete)
         Write-Host "Entity deleted successfully"
     } catch {
-        Write-Host "Generic Error Message"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
 
 <#
@@ -198,7 +198,7 @@ function Get-CloudMonitoringEntities {
         }
     }
 
-    Write-Verbose 'Using String: ' + $entityURI
+    Write-Debug "URI: `"$entityURI`""
     try {
         $result = (Invoke-RestMethod -URI $entityURI -Headers (Get-HeaderDictionary))
     } catch {
@@ -287,8 +287,8 @@ function Update-ClouldMonitoringEntity {
         [string] $uri
     )
 
-    Set-Variable -Name entityUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId")
-    Set-Variable -Name jsonBody -Scope Private -Value $null
+    Set-Variable -Name entityUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId")
+    Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
         $metaDataType = $metadata.GetType().BaseType.Name
@@ -300,11 +300,13 @@ function Update-ClouldMonitoringEntity {
     
     $jsonBody = (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
 
-    $private:entityUri += "/$entityId"
+    $entityUri += "/$entityId"
+    Write-Debug "URI: `"$entityUri`""
+    Write-Debug "JSON Body: $jsonBody"
     try {
-        Invoke-RestMethod -URI $private:entityURI -Body $private:jsonBody -Headers (Get-HeaderDictionary) -Method PUT
+        Invoke-RestMethod -URI $entityURI -Body $jsonBody -Headers (Get-HeaderDictionary) -Method PUT
     } catch {
-        Write-Host "Generic Error Message"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
 <#
     .SYNOPSIS
@@ -330,7 +332,7 @@ function Update-ClouldMonitoringEntity {
     Indicate if the entity is managed.
 
     .PARAMETER metadata
-    A hashtable with the metadata values
+    An array or hashtable with the metadata values  
 
     .PARAMETER uri
     The URI for the entity.

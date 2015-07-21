@@ -70,6 +70,9 @@ function Request-AuthToken() {
     Set-Variable -Name AuthURI -Value (Get-IdentityAuthURI)
     Set-Variable -Name AuthBody -Value (Get-IdentityAuthBody)
 
+    Write-Verbose "Using endpoint: `"$authURI`""
+    Write-Debug "JSOn body passed: `"$AuthBody`""
+
     try {
         $script:accessToken = (Invoke-RestMethod -Uri $AuthURI -Body $AuthBody -ContentType application/json -Method Post)
     } catch {

@@ -1,5 +1,5 @@
 #
-# Functions for interacting with cloud monitoring
+# Functions for interacting with cloud monitoring zones
 #
 
 function Get-CloudMonitoringZone {
@@ -11,7 +11,7 @@ function Get-CloudMonitoringZone {
     try {
         return (Get-CloudMonitoringZoneHelper -zoneId $zoneId)
     } catch {
-        Write-Error 'Generic error message'
+        Write-Host "Generic Error message that needs to be fixed here"
     }
     
 <#
@@ -37,9 +37,9 @@ function Get-CloudMonitoringZones {
     param()
 
     try {
-        return (Get-CloudMonitoringZoneHelper)
+        return (Get-CloudMonitoringZoneHelper).values
     } catch { 
-        Write-Error 'Generic Error message'
+        Write-Host "Generic Error message that needs to be fixed here"
     }
 
 <#
@@ -70,18 +70,21 @@ function Get-CloudMonitoringZoneHelper {
     if($zoneId) { $cloudMonitoringURI += '/' + $zoneId }
     
     Get-AccessToken | Out-Null
-    $result = Invoke-RestMethod -URI $cloudMonitoringURI -Headers (Get-HeaderDictionary)
+    Write-Debug "URI: `"$cloudMonitoringURI`""
+    try {
+        $result = Invoke-RestMethod -URI $cloudMonitoringURI -Headers (Get-HeaderDictionary)
+    } catch {
+        Write-Host "Generic Error message that needs to be fixed here"
+    }
 
-    if($zoneId) { return $result }
-    return $result.values
+    return $result
 
 <#
     .SYNOPSIS
-    "Overloaded" helper supproting the Get-CloudMonitoringZone(s) functions.
+    "Overloaded" helper supporting the Get-CloudMonitoringZone(s) functions.
 
     .DESCRIPTION
-    Performs the actual token request and Rest-Method request and, based off the zoneId, 
-    parses the and returns the $results for processing.
+    Performs the actual request.
 
 #>
 }
@@ -111,10 +114,12 @@ function Trace-FromCloudMonitoringZone {
 
     Get-AccessToken |Out-Null
 
+    Write-Debug "URI: `"$cloudMonitoringURI`""
+    Write-Debug "JSON Body: $traceRequestBody"
     try {
         Invoke-RestMethod -Uri $cloudMonitoringURI -Body $traceRequestBody -Headers (Get-HeaderDictionary) -ContentType application/json -Method Post
     } catch {
-        Write-Error "Generic Error message that needs to be fixed here"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
 
 <#

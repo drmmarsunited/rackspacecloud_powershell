@@ -1,10 +1,15 @@
+#
+# Functions for interacting with cloud monitoring notifications
+#
+
 function Add-CloudMonitoringNotification {
     param (
         [Parameter(Mandatory=$true)]
-        [string] $details,
+        [Objecvt] $details,
         [Parameter(Mandatory=$true)]
         [string] $label,
         [Parameter(Mandatory=$true)]
+        [ValidSet("webhook", "email", "pagerduty", "sms", "managed", "technicalContactsEmail", "atomHopper")]
         [string] $type,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
@@ -12,7 +17,37 @@ function Add-CloudMonitoringNotification {
 
     Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications")
 
-    return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
+    try {
+        return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
+    } catch {
+        Write-Host "Generic Error message that needs to be fixed here"
+    }
+<#
+    .SYNOPSIS
+    Adds a monitoring notification.
+
+    .DESCRIPTION
+    See synopsis. The link specified will have more details about the types of notifications.
+
+    .PARAMETER details
+    A hash of notification specific details based on the notification type.
+    
+    .PARAMETER label
+    Friendly name for the notification.
+
+    .PARAMETER type
+    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
+
+    .PARAMETER metadata
+    A hashtable with the metadata values
+
+    .EXAMPLE
+    Add-CloudMonitoringNotification -label "Sample Webhook" -details @{uri="https://webhook.sample.com/alert"} -type "webhook"
+    Adds a webhook sample notification
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#POST_createNotification_notifications_service-notifications
+#>
 }
 
 function Private-AddCloudMonitoringNotification {
@@ -20,7 +55,7 @@ function Private-AddCloudMonitoringNotification {
         [Parameter(Mandatory=$true)]
         [string] $notificationUri,
         [Parameter(Mandatory=$true)]
-        [string] $details,
+        [Object] $details,
         [Parameter(Mandatory=$true)]
         [string] $label,
         [Parameter(Mandatory=$true)]
@@ -30,6 +65,14 @@ function Private-AddCloudMonitoringNotification {
     )
 
     Set-Variable -Name jsonBody -Value $null
+
+    if($details) {
+        $detailsDataType = $details.GetType().BaseType.Name
+
+        if( -not( @("Array", "Hashtable") -match $detailsDataType) ) {
+        Write-Host "The data type passed in as details is not of type Array or Hashtable."
+        return
+    }
 
     if($metadata) {
         $metaDataType = $metadata.GetType().BaseType.Name
@@ -44,8 +87,30 @@ function Private-AddCloudMonitoringNotification {
     try {
         return (Invoke-RestMethod -URI $notificationUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method POST)
     } catch {
-        Write-Host "Generic Error Message"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
+<#
+    .SYNOPSIS
+    Performs the actual work for adding/testing notifications.
+
+    .DESCRIPTION
+    See synopsis.
+
+    .PARAMETER notificationUri
+    The URI to invoke.
+
+    .PARAMETER details
+    A hash of notification specific details based on the notification type.
+    
+    .PARAMETER label
+    Friendly name for the notification.
+
+    .PARAMETER type
+    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
+
+    .PARAMETER metadata
+    A hashtable with the metadata values
+#>
 }
 
 function Convert-CloudMonitoringNotification {
@@ -68,6 +133,25 @@ function Convert-CloudMonitoringNotification {
     if($metadata) { $body | Add-Member -MemberType NoteProperty -Name metadata -Value $metadata }
 
     return (ConvertTo-Json $body)
+<#
+    .SYNOPSIS
+    Converts the specified parameters to a consumable JSON.
+
+    .DESCRIPTION
+    See synopsis.
+
+    .PARAMETER details
+    A hash of notification specific details based on the notification type.
+    
+    .PARAMETER label
+    Friendly name for the notification.
+
+    .PARAMETER type
+    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
+
+    .PARAMETER metadata
+    A hashtable with the metadata values
+#>
 }
 
 function Delete-CloudMonitoringNotification {
@@ -81,8 +165,21 @@ function Delete-CloudMonitoringNotification {
     try {
         Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary) -Method DELETE
     } catch {
-        Write-Host "Warning message here"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
+<#
+    .SYNOPSIS
+    Deletes the notification
+
+    .DESCRIPTION
+    See synopsis.
+
+    .PARAMETER notificationId
+    The notification to delete.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#DELETE_deleteNotification_notifications__notificationId__service-notifications
+#>
 }
 
 function Get-CloudMonitoringNotification {
@@ -108,14 +205,24 @@ function Get-CloudMonitoringNotification {
     try {
         $result = (Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary))
     } catch {
-        Write-Host "Generic Error Here"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
 
     if($notificationId.Length -gt 1) {$result = $result.values}
     return $result
 
 <#
+    .SYNOPSIS
+    Returns information on the specific notification(s)
 
+    .DESCRIPTION
+    Returns information on the specific notification(s). If nothing is specified, then all notifications are returned.
+
+    .PARAMETER notificationId
+    The notification(s) to view.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#GET_listNotifications_notifications_service-notifications
 #>
 }
 
@@ -125,14 +232,21 @@ function Get-CloudMonitoringNotifications {
     return (Get-CloudMonitoringNotification).values
 
 <#
+    .SYNOPSIS
+    Returns information on all notifications.
 
+    .DESCRIPTION
+    See synopsis
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#GET_listNotifications_notifications_service-notifications
 #>
 }
 
 function Test-AddCloudMonitoringNotification {
     param (
         [Parameter(Mandatory=$true)]
-        [string] $details,
+        [Object] $details,
         [Parameter(Mandatory=$true)]
         [string] $label,
         [Parameter(Mandatory=$true)]
@@ -143,7 +257,37 @@ function Test-AddCloudMonitoringNotification {
 
     Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/test-notification")
 
-    return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
+    try {
+        return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
+    } catch {
+        Write-Host "Generic Error message that needs to be fixed here"
+    }
+<#
+    .SYNOPSIS
+    Test adds a monitoring notification.
+
+    .DESCRIPTION
+    See synopsis. The link specified will have more details about the types of notifications.
+
+    .PARAMETER details
+    A hash of notification specific details based on the notification type.
+    
+    .PARAMETER label
+    Friendly name for the notification.
+
+    .PARAMETER type
+    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
+
+    .PARAMETER metadata
+    A hashtable with the metadata values
+
+    .EXAMPLE
+    Test-AddCloudMonitoringNotification -label "Sample Webhook" -details @{uri="https://webhook.sample.com/alert"} -type "webhook"
+    Adds a webhook sample notification
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#POST_TestNotification_test-notification_service-notifications
+#>
 }
 
 function Test-CloudMonitoringNotification {
@@ -157,8 +301,21 @@ function Test-CloudMonitoringNotification {
     try {
         Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary)
     } catch {
-        Write-Host "Generic Error Here"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
+<#
+    .SYNOPSIS
+    Tests an existing monitoring notification.
+
+    .DESCRIPTION
+    See synopsis.
+
+    .PARAMETER notificationId
+    The id of the notification to test.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#POST_TestNotificationId_notifications__notificationId__test_service-notifications
+#>
 }
 
 function Update-CloudMonitoringNotification {
@@ -191,7 +348,31 @@ function Update-CloudMonitoringNotification {
     try {
         Invoke-RestMethod -URI $notificationUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method PUT
     } catch {
-        Write-Host "Generic Error Message"
+        Write-Host "Generic Error message that needs to be fixed here"
     }
+<#
+    .SYNOPSIS
+    Updates an existing monitoring notification.
 
+    .DESCRIPTION
+    See synopsis. The link specified will have more details about the types of notifications.
+
+    .PARAMETER notificationId
+    The id of the notification to update.
+
+    .PARAMETER details
+    A hash of notification specific details based on the notification type.
+    
+    .PARAMETER label
+    Friendly name for the notification.
+
+    .PARAMETER type
+    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
+
+    .PARAMETER metadata
+    A hashtable with the metadata values
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#POST_TestNotification_test-notification_service-notifications
+#>
 }
