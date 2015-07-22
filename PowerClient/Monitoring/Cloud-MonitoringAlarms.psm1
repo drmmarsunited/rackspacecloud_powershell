@@ -26,22 +26,23 @@ function Add-CloudMonitoringAlarm {
     Set-Variable -Name result -Value $null
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data metadata passed is not of type Array or Hashtable."
+            return
+        }
     }
 
-    $jsonBody = `
-    (   Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
+    $jsonBody = ( `
+        Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria `
             -disabled $disabled -label $label -metadata $metadata
     )
 
     Write-Debug "URI: `"$alarmURI`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        $result = (Invoke-RestMethod -Name $alarmUri -Body $body -Headers (Get-HeaderDictionary) -Method Post)
+        $result = (Invoke-RestMethod -Uri $alarmUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method Post)
     } catch {
         Write-Host "Generic Error Here"
     }
@@ -138,7 +139,79 @@ function Convert-ClouldMonitorAlarmParameters {
 #>
 }
 
-function Delete-CloudMonitoringAlarm {
+function Get-CloudMonitoringAlarm {
+    param (
+        [Parameter(Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
+        [Parameter(Position=1, Mandatory=$false)]
+        [string[]] $alarmId
+    )
+
+    Set-Variable -Name alarmUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms")
+    Set-Variable -Name alarmIdArray -Value $null
+    Set-Variable -Name results -Value $null
+    
+    if($alarmId) {
+        $alarmIdArray = [System.Collections.Generic.List[System.Object]] $alarmId
+        $alarmUri += "?id=$($alarmIdArray.Item(0))"
+        $alarmIdArray.RemoveAt(0)
+
+        foreach($a in $alarmIdArray) {
+            $alarmUri += "&$a"
+        }
+    }
+
+    Write-Debug "URI: `"$alarmURI`""
+    try {
+        $results = (Invoke-RestMethod -Uri $alarmUri -Headers (Get-HeaderDictionary))
+    } catch {
+        Write-Message "Generic Error here"
+    }
+
+    return $results.values
+<#
+    .SYNOPSIS
+    Gets a cloud monitoring alarm.
+
+    .DESCRIPTION
+    Gets a cloud monitoring alarm. If none are specified, this behaves the same as Get-CloudMonitoringAlarms
+    
+    .PARAMETER entityId
+    The entityId to which the alarm is related to.
+
+    .PARAMETER alarmId
+    The id of the alarm to get. If not specified, all alarms associated with the entity are returned.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-alarms.html#GET_listAlarms_entities__entityId__alarms_service-alarms
+#>
+}
+
+function Get-CloudMonitoringAlarms {
+    param (
+        [Parameter(Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId
+    )
+
+    return (Get-CloudMonitoringAlarms -entityId $entityId)
+<#
+    .SYNOPSIS
+    Gets all cloud monitoring alarms associated with the entity.
+
+    .DESCRIPTION
+    See synopsis
+    
+    .PARAMETER entityId
+    The entityId to which the alarm is related to.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-alarms.html#GET_listAlarms_entities__entityId__alarms_service-alarms
+#>
+}
+
+function Remove-CloudMonitoringAlarm {
     param (
         [Parameter(Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -174,79 +247,6 @@ function Delete-CloudMonitoringAlarm {
 #>
 }
 
-function Get-CloudMonitoringAlarm {
-    param (
-        [Parameter(Position=0, Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $entityId,
-        [Parameter(Position=1, Mandatory=$false)]
-        [string[]] $alarmId
-    )
-
-    Set-Variable -Name alarmUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms"​)
-    Set-Variable -Name alarmIdArray -Value $null
-    Set-Variable -Name results -Value $null
-    
-    if($alarmId) {
-        $alarmIdArray = [System.Collections.Generic.List[System.Object]] $alarmId
-        $alarmUri += "?id=${$alarmIdArray.Item(0)}"
-        $alarmIdArray.RemoveAt(0)
-
-        foreach($a in $alarmIdArray) {
-            $alarmUri += "&$a"
-        }
-    }
-
-    Write-Debug "URI: `"$alarmURI`""
-    try {
-        $results = (Invoke-RestMethod -Uri $alarmUri -Headers (Get-HeaderDictionary))
-    } catch {
-        Write-Message "Generic Error here"
-    }
-
-    if($alarmId.Length) { $results = $results.values }
-    return $results
-<#
-    .SYNOPSIS
-    Gets a cloud monitoring alarm.
-
-    .DESCRIPTION
-    Gets a cloud monitoring alarm. If none are specified, this behaves the same as Get-CloudMonitoringAlarms
-    
-    .PARAMETER entityId
-    The entityId to which the alarm is related to.
-
-    .PARAMETER alarmId
-    The id of the alarm to get. If not specified, all alarms associated with the entity are returned.
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-alarms.html#GET_listAlarms_entities__entityId__alarms_service-alarms
-#>
-}
-
-function Get-CloudMonitoringAlarms {
-    param (
-        [Parameter(Position=0, Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $entityId
-    )
-
-    return (Get-CloudMonitoringAlarms -entityId $entityId).values
-<#
-    .SYNOPSIS
-    Gets all cloud monitoring alarms associated with the entity.
-
-    .DESCRIPTION
-    See synopsis
-    
-    .PARAMETER entityId
-    The entityId to which the alarm is related to.
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-alarms.html#GET_listAlarms_entities__entityId__alarms_service-alarms
-#>
-}
-
 function Update-CloudMonitoringAlaram {
     param (
         [Parameter(Mandatory=$true)]
@@ -254,9 +254,10 @@ function Update-CloudMonitoringAlaram {
         [string] $entityId,
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [string] $alarmId,
-        [Parameter(Mandatory=$true)]
         [string] $checkId,
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $alarmId,
         [Parameter(Mandatory=$false)]
         [string] $notificationPlanId,
         [Parameter(Mandatory=$false)]
@@ -270,15 +271,27 @@ function Update-CloudMonitoringAlaram {
     )
 
     Set-Variable -Name alarmURI -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/alarms/$alarmId")
-    Set-Variable -Name jsonbody -Value `
-        (Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
-            -disabled $disabled -label $label -metadata $metadata)
+    Set-Variable -Name jsonbody -Value $null
     Set-Variable -Name result -Value $null
     
+    if($metadata) {
+        $metaDataType = $metadata.GetType().Name
+
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data metadata passed is not of type Array or Hashtable."
+            return
+        }
+    }
+
+    $jsonBody = ( `
+        Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria `
+            -disabled $disabled -label $label -metadata $metadata
+    )
+
     Write-Debug "URI: `"$alarmURI`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        $result = (Invoke-RestMethod -Name $alarmUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method PUT)
+        $result = (Invoke-RestMethod -URI $alarmUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method PUT)
     } catch {
         Write-Host "Generic Error Here"
     }
@@ -293,12 +306,12 @@ function Update-CloudMonitoringAlaram {
     
     .PARAMETER entityId
     The ID of the entity to which the check belongs.
-        
-    .PARAMETER alarmId
-    The ID of the alarm to update.
 
     .PARAMETER checkId
     The ID of the check to alert on.
+        
+    .PARAMETER alarmId
+    The ID of the alarm to update.
         
     .PARAMETER notificationPlanId
     The id of the notification plan to execute when the state changes.
@@ -345,27 +358,28 @@ function Test-AddCloudMonitoringAlarm {
         [Object] $metadata
     )
 
-    Set-Variable -Name alarmURI -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/test-alarm")
+    Set-Variable -Name alarmURI -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/test-alarm")
     Set-Variable -Name jsonBody -Value $null
     Set-Variable -Name result -Value $null
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data metadata passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = ( `
-        Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria
+        Convert-ClouldMonitorAlarmParameters -checkId $checkId -notificationPlanId $notificationPlanId -criteria $criteria `
             -disabled $disabled -label $label -metadata $metadata
     )
 
     Write-Debug "URI: `"$alarmURI`""
     Write-Debug "JSON Body: $jsonBody"
     try {
-        $result = (Invoke-RestMethod -Name $alarmUri -Body $body -Headers (Get-HeaderDictionary) -Method PUT)
+        $result = (Invoke-RestMethod -Name $alarmUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method PUT)
     } catch {
         Write-Host "Generic Error Here"
     }

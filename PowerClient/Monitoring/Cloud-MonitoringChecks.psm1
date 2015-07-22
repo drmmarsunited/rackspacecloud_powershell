@@ -6,7 +6,7 @@ function Add-CloudMonitoringCheck {
     param (
         [Parameter (Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [string] $entityId
+        [string] $entityId,
         [Parameter(Position=0, Mandatory=$true)]
         [string] $type,
         [Parameter(Position=1, Mandatory=$false)]
@@ -14,7 +14,7 @@ function Add-CloudMonitoringCheck {
         [Parameter(Position=2, Mandatory=$false)]
         [boolean] $disabled,
         [Parameter(Position=3, Mandatory=$false)]
-        [boolean] $label,
+        [String] $label,
         [Parameter(Position=4, Mandatory=$false)]
         [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
@@ -29,41 +29,43 @@ function Add-CloudMonitoringCheck {
         [string] $target_hostname,
         [Parameter(Mandatory=$false)]
         [ValidateSet("IPv4", "IPv6")]
-        [string] $target_resolver,
+        [string] $target_resolver
     )
 
     Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks")
     Set-Variable -Name jsonBody -Value $null
     
     if($details) {
-        $detailsDataType = $details.GetType().BaseType.Name
+        $detailsDataType = $details.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $detailsDataType) ) {
-        Write-Host "The data details passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $detailsDataType) ) {
+            Write-Host "The data details passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data metadata passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data metadata passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = ( `
-        Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
+        Convert-CloudMonitoringCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )
     
 
     Write-Debug "URI: `"$checkUri`""
-    Write-Debug "JSON Body: $jsonBody"
-    try {
-        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $jsonBody -Method Post
-    } catch {
-        Write-Host "Generic Error message that needs to be fixed here"
-    }
+    Write-Debug "Body: `n$jsonBody"
+    #try {
+        Invoke-RestMethod -URI $checkUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method Post
+    #} catch {
+    #    Write-Host "Generic Error message that needs to be fixed here"
+    #}
 <#
     .SYNOPSIS
     Adds a cloud monitoring check to the specified entity.
@@ -115,14 +117,14 @@ function Add-CloudMonitoringCheck {
 
 function Convert-CloudMonitoringCheckParameters {
     param (
-        [Parameter(Position=0, Mandatory=$true)]
+        [Parameter(Position=0, Mandatory=$false)]
         [string] $type,
         [Parameter(Position=1, Mandatory=$false)]
         [Object] $details,
         [Parameter(Position=2, Mandatory=$false)]
         [boolean] $disabled,
         [Parameter(Position=3, Mandatory=$false)]
-        [boolean] $label,
+        [String] $label,
         [Parameter(Position=4, Mandatory=$false)]
         [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
@@ -136,8 +138,7 @@ function Convert-CloudMonitoringCheckParameters {
         [Parameter(Mandatory=$false)]
         [string] $target_hostname,
         [Parameter(Mandatory=$false)]
-        [ValidateSet("IPv4", "IPv6")]
-        [string] $target_resolver,
+        [string] $target_resolver
     )
 
     $body = New-Object -TypeName PSObject
@@ -198,42 +199,6 @@ function Convert-CloudMonitoringCheckParameters {
 #>
 }
 
-function Delete-CloudMonitoringCheck {
-    param (
-        [Parameter (Position=0, Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $entityId,
-        [Parameter(Position=1, Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $checkTypeId
-    )
-
-    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
-    
-    Write-Debug "URI: `"$checkUri`""
-    try {
-        Invoke-RestMethod -Uri checkUri -Headers (Get-HeaderDictionary) -Method Delete
-    } catch {
-        Write-Host "Generic Error message that needs to be fixed here"
-    }
-<#
-    .SYNOPSIS
-    Deletes the specified check
-
-    .DESCRIPTION
-    See synopsis
-
-    .PARAMETER entityId
-    Use this parameter to specify the entity to which the check belongs.
-
-    .PARAMETER checkTypeId
-    Use this parameter to specify the check to delete.
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-checks.html#DELETE_deleteCheck_entities__entityId__checks__checkId__service-checks
-#>
-}
-
 function Get-CloudMonitoringCheck {
     param (
         [Parameter (Position=0, Mandatory=$true)]
@@ -243,12 +208,12 @@ function Get-CloudMonitoringCheck {
         [string] $checkTypeId
     )
 
-    Set-Variable -Name checkUri -Scope Private -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
-    Set-Variable -Name results -Scope Private -Value $null
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
+    Set-Variable -Name results -Value $null
 
     Write-Debug "URI: `"$checkUri`""
     try {
-        $private:results = Invoke-RestMethod -URI $private:checkUri -Headers (Get-HeaderDictionary)
+        $results = Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary)
     } catch {
         Write-Host "Generic Error message that needs to be fixed here"
     }
@@ -285,10 +250,10 @@ function Get-CloudMonitoringChecks {
     param (
         [Parameter (Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [string] $entityId,
+        [string] $entityId
     )
 
-    return (Get-CloudMonitoringEntityCheck -entityId $entityId).values
+    return (Get-CloudMonitoringCheck -entityId $entityId).values
 
 <#
     .SYNOPSIS
@@ -322,13 +287,13 @@ function Get-CloudMonitoringCheckTypes {
 
     Write-Debug "URI: `"$checkUri`""
     try {
-        $results = (Invoke-RestMethod -Uri checkUri -Headers (Get-HeaderDictionary))
+        $results = (Invoke-RestMethod -Uri $checkUri -Headers (Get-HeaderDictionary))
     } catch {
 
     }
 
-    if(-not $results.values) { $reuslts = $reuslts.values }
-    return $results
+    if(-not $results.values) { return $result }
+    return $results.values
 
 <#
     .SYNOPSIS
@@ -354,6 +319,42 @@ function Get-CloudMonitoringCheckTypes {
 #>
 }
 
+function Remove-CloudMonitoringCheck {
+    param (
+        [Parameter (Position=0, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId,
+        [Parameter(Position=1, Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $checkTypeId
+    )
+
+    Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId")
+    
+    Write-Debug "URI: `"$checkUri`""
+    try {
+        Invoke-RestMethod -Uri $checkUri -Headers (Get-HeaderDictionary) -Method Delete
+    } catch {
+        Write-Host "Generic Error message that needs to be fixed here"
+    }
+<#
+    .SYNOPSIS
+    Deletes the specified check
+
+    .DESCRIPTION
+    See synopsis
+
+    .PARAMETER entityId
+    Use this parameter to specify the entity to which the check belongs.
+
+    .PARAMETER checkTypeId
+    Use this parameter to specify the check to delete.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-checks.html#DELETE_deleteCheck_entities__entityId__checks__checkId__service-checks
+#>
+}
+
 function Test-AddCloudMonitoringCheck {
     param (
         [Parameter (Position=0, Mandatory=$true)]
@@ -366,7 +367,7 @@ function Test-AddCloudMonitoringCheck {
         [Parameter(Position=3, Mandatory=$false)]
         [boolean] $disabled,
         [Parameter(Position=4, Mandatory=$false)]
-        [boolean] $label,
+        [String] $label,
         [Parameter(Position=5, Mandatory=$false)]
         [Object] $metadata,
         [Parameter(Position=6, Mandatory=$false)]
@@ -390,32 +391,34 @@ function Test-AddCloudMonitoringCheck {
     Set-Variable -Name jsonBody -Value $null
     
     if($details) {
-        $detailsDataType = $details.GetType().BaseType.Name
+        $detailsDataType = $details.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $detailsDataType) ) {
-        Write-Host "The data details passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $detailsDataType) ) {
+            Write-Host "The data details passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data metadata passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = ( `
-        Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
+        Convert-CloudMonitoringCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )
     
-    if($asDebug) { $pviate:checkUri += '?debug' }
+    if($asDebug) { $checkUri += '?debug=true' }
 
     Write-Debug "URI: `"$checkUri`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $jsonBody -Method Post
+        Invoke-RestMethod -URI $checkUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method Post
     } catch {
         Write-Host "Generic Error message that needs to be fixed here"
     }
@@ -481,11 +484,11 @@ function Test-CloudMonitoringCheckInline {
     Set-Variable -Name checkUri -Value ((Get-IdentityMonitoringURI) + "/entities/$entityId/checks/$checkTypeId/test")
 
     Write-Debug "URI: `"$checkUri`""
-    try {
-        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $private:jsonBody -Method Post
-    } catch {
-        Write-Host "Generic Error message that needs to be fixed here"
-    }
+    #try {
+        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Method Post
+    #} catch {
+    #    Write-Host "Generic Error message that needs to be fixed here"
+    #}
 <#
     .SYNOPSIS
     Tests an existing check inline.
@@ -521,7 +524,7 @@ function Update-CloudMonitoringCheck {
         [Parameter(Position=2, Mandatory=$false)]
         [boolean] $disabled,
         [Parameter(Position=3, Mandatory=$false)]
-        [boolean] $label,
+        [String] $label,
         [Parameter(Position=4, Mandatory=$false)]
         [Object] $metadata,
         [Parameter(Position=5, Mandatory=$false)]
@@ -543,30 +546,32 @@ function Update-CloudMonitoringCheck {
     Set-Variable -Name jsonBody -Value $null
     
     if($details) {
-        $detailsDataType = $details.GetType().BaseType.Name
+        $detailsDataType = $details.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $detailsDataType) ) {
-        Write-Host "The data details passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $detailsDataType) ) {
+            Write-Host "The data details passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data metadata passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = ( `
-        Convert-CloudMonitoringEntityCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
+        Convert-CloudMonitoringCheckParameters -type $type -details $details -disabled $disabled -label $label -metadata $metadata -period $period `
         -timeout $timeout -monitoring_zones_poll $monitoring_zones_poll -target_alias $target_alias -target_hostname $target_hostname -target_resolver $target_resolver
     )
 
     Write-Debug "URI: `"$checkUri`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        Invoke-RestMethod -URI $checkUri -Headers (Get-HeaderDictionary) -Body $jsonBody -Method Put
+        Invoke-RestMethod -URI $checkUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method Put
     } catch {
         Write-Host "Generic Error message that needs to be fixed here"
     }

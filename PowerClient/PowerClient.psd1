@@ -59,10 +59,19 @@ DotNetFrameworkVersion = '2.0'
 # FormatsToProcess = @()
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
-NestedModules = @('Authentication.psm1')
+NestedModules = @(
+    'Authentication.psm1',
+    '.\Monitoring\Cloud-MonitoringAlarms.psm1',
+    '.\Monitoring\Cloud-MonitoringChecks.psm1',
+    '.\Monitoring\Cloud-MonitoringEntity.psm1',
+    '.\Monitoring\Cloud-MonitoringNotification.psm1',
+    '.\Monitoring\Cloud-MonitoringNotificationPlans.psm1',
+    '.\Monitoring\Cloud-MonitoringSuppression.psm1',
+    '.\Monitoring\Cloud-MonitoringZones.psm1'
+)
 
 # Functions to export from this module
-FunctionsToExport = '*'
+FunctionsToExport = 'Add-*','Get-*','Remove-*','Request-*','Set-*','Test-*','Update-*'
 
 # Cmdlets to export from this module
 CmdletsToExport = '*'
@@ -77,7 +86,16 @@ AliasesToExport = '*'
 ModuleList = @(
     'Authentication.psm1',
     'IdentityProvider.psm1',
-    '.\Providers\Rackspace.psm1'
+    '.\Monitoring\Cloud-MonitoringAlarms.psm1',
+    '.\Monitoring\Cloud-MonitoringChecks.psm1',
+    '.\Monitoring\Cloud-MonitoringEntity.psm1',
+    '.\Monitoring\Cloud-MonitoringNotification.psm1',
+    '.\Monitoring\Cloud-MonitoringNotificationPlans.psm1',
+    '.\Monitoring\Cloud-MonitoringSuppression.psm1',
+    '.\Monitoring\Cloud-MonitoringZones.psm1',
+    '.\Providers\Rackspace.psm1',
+    '.\Providers\Default.psm1'
+    
 )
 
 # List of all files packaged with this module

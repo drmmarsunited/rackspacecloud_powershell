@@ -5,11 +5,11 @@
 function Add-CloudMonitoringNotification {
     param (
         [Parameter(Mandatory=$true)]
-        [Objecvt] $details,
+        [Object] $details,
         [Parameter(Mandatory=$true)]
         [string] $label,
         [Parameter(Mandatory=$true)]
-        [ValidSet("webhook", "email", "pagerduty", "sms", "managed", "technicalContactsEmail", "atomHopper")]
+        [ValidateSet("webhook", "email", "pagerduty", "sms", "managed", "technicalContactsEmail", "atomHopper")]
         [string] $type,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
@@ -17,11 +17,11 @@ function Add-CloudMonitoringNotification {
 
     Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications")
 
-    try {
+    #try {
         return (Private-AddCloudMonitoringNotification -notificationUri $notificationUri -details $details -label $label -type $type -metadata $metadata)
-    } catch {
-        Write-Host "Generic Error message that needs to be fixed here"
-    }
+    #} catch {
+    #    Write-Host "Generic Error message that needs to be fixed here"
+    #}
 <#
     .SYNOPSIS
     Adds a monitoring notification.
@@ -50,76 +50,13 @@ function Add-CloudMonitoringNotification {
 #>
 }
 
-function Private-AddCloudMonitoringNotification {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string] $notificationUri,
-        [Parameter(Mandatory=$true)]
-        [Object] $details,
-        [Parameter(Mandatory=$true)]
-        [string] $label,
-        [Parameter(Mandatory=$true)]
-        [string] $type,
-        [Parameter(Mandatory=$false)]
-        [Object] $metadata
-    )
-
-    Set-Variable -Name jsonBody -Value $null
-
-    if($details) {
-        $detailsDataType = $details.GetType().BaseType.Name
-
-        if( -not( @("Array", "Hashtable") -match $detailsDataType) ) {
-        Write-Host "The data type passed in as details is not of type Array or Hashtable."
-        return
-    }
-
-    if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
-
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
-    }
-
-    $jsonBody = Convert-CloudMonitoringNotification -details $details -label $label -type $type -metadata $metadata
-
-    try {
-        return (Invoke-RestMethod -URI $notificationUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method POST)
-    } catch {
-        Write-Host "Generic Error message that needs to be fixed here"
-    }
-<#
-    .SYNOPSIS
-    Performs the actual work for adding/testing notifications.
-
-    .DESCRIPTION
-    See synopsis.
-
-    .PARAMETER notificationUri
-    The URI to invoke.
-
-    .PARAMETER details
-    A hash of notification specific details based on the notification type.
-    
-    .PARAMETER label
-    Friendly name for the notification.
-
-    .PARAMETER type
-    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
-
-    .PARAMETER metadata
-    A hashtable with the metadata values
-#>
-}
-
 function Convert-CloudMonitoringNotification {
     param (
-        [Parameter(Mandatory=$true)]
-        [string] $details,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
+        [Object] $details,
+        [Parameter(Mandatory=$false)]
         [string] $label,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $type,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
@@ -154,34 +91,6 @@ function Convert-CloudMonitoringNotification {
 #>
 }
 
-function Delete-CloudMonitoringNotification {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string] $notificationId
-    )
-
-    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications/$notificationId")
-    
-    try {
-        Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary) -Method DELETE
-    } catch {
-        Write-Host "Generic Error message that needs to be fixed here"
-    }
-<#
-    .SYNOPSIS
-    Deletes the notification
-
-    .DESCRIPTION
-    See synopsis.
-
-    .PARAMETER notificationId
-    The notification to delete.
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#DELETE_deleteNotification_notifications__notificationId__service-notifications
-#>
-}
-
 function Get-CloudMonitoringNotification {
     param (
         [Parameter(Mandatory=$false)]
@@ -208,7 +117,7 @@ function Get-CloudMonitoringNotification {
         Write-Host "Generic Error message that needs to be fixed here"
     }
 
-    if($notificationId.Length -gt 1) {$result = $result.values}
+    if($notificationId.Length -gt 0) {$result = $result.values}
     return $result
 
 <#
@@ -243,6 +152,99 @@ function Get-CloudMonitoringNotifications {
 #>
 }
 
+function Private-AddCloudMonitoringNotification {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string] $notificationUri,
+        [Parameter(Mandatory=$true)]
+        [Object] $details,
+        [Parameter(Mandatory=$true)]
+        [string] $label,
+        [Parameter(Mandatory=$true)]
+        [string] $type,
+        [Parameter(Mandatory=$false)]
+        [Object] $metadata
+    )
+
+    Set-Variable -Name jsonBody -Value $null
+
+    if($details) {
+        $detailsDataType = $details.GetType().Name
+
+        if( -not( @("Object[]", "Hashtable") -match $detailsDataType) ) {
+            Write-Debug "Datatype seen: $detailsDataType"
+            Write-Host "The data type passed in as details is not of type Array or Hashtable."
+            return
+        }
+    }
+
+    if($metadata) {
+        $metaDataType = $metadata.GetType().Name
+
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Debug "Datatype seen: $detailsDataType"
+            Write-Host "The data type passed is not of type Array or Hashtable."
+            return
+        }
+    }
+
+    $jsonBody = Convert-CloudMonitoringNotification -details $details -label $label -type $type -metadata $metadata
+
+    Write-Debug "URI: `"$notificationUri`""
+    Write-Debug "Body: `n$jsonBody"
+    return (Invoke-RestMethod -URI $notificationUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method POST)
+<#
+    .SYNOPSIS
+    Performs the actual work for adding/testing notifications.
+
+    .DESCRIPTION
+    See synopsis.
+
+    .PARAMETER notificationUri
+    The URI to invoke.
+
+    .PARAMETER details
+    A hash of notification specific details based on the notification type.
+    
+    .PARAMETER label
+    Friendly name for the notification.
+
+    .PARAMETER type
+    The notification type to send. Valid options are: webhook, email, pagerduty, sms, managed, technicalContactsEmail, atomHopper
+
+    .PARAMETER metadata
+    A hashtable with the metadata values
+#>
+}
+
+function Remove-CloudMonitoringNotification {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string] $notificationId
+    )
+
+    Set-Variable -Name notificationUri -Value ((Get-IdentityMonitoringURI) + "/notifications/$notificationId")
+    
+    try {
+        Invoke-RestMethod -URI $notificationUri -Headers (Get-HeaderDictionary) -Method DELETE
+    } catch {
+        Write-Host "Generic Error message that needs to be fixed here"
+    }
+<#
+    .SYNOPSIS
+    Deletes the notification
+
+    .DESCRIPTION
+    See synopsis.
+
+    .PARAMETER notificationId
+    The notification to delete.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notifications.html#DELETE_deleteNotification_notifications__notificationId__service-notifications
+#>
+}
+
 function Test-AddCloudMonitoringNotification {
     param (
         [Parameter(Mandatory=$true)]
@@ -250,6 +252,7 @@ function Test-AddCloudMonitoringNotification {
         [Parameter(Mandatory=$true)]
         [string] $label,
         [Parameter(Mandatory=$true)]
+        [ValidateSet("webhook", "email", "pagerduty", "sms", "managed", "technicalContactsEmail", "atomHopper")]
         [string] $type,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
@@ -327,6 +330,7 @@ function Update-CloudMonitoringNotification {
         [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
+        [ValidateSet("webhook", "email", "pagerduty", "sms", "managed", "technicalContactsEmail", "atomHopper")]
         [string] $type,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
@@ -336,17 +340,18 @@ function Update-CloudMonitoringNotification {
     Set-Variable -Name jsonBody -Value $null
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType()
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if($metaDataType.name -ne "Hashtable" -and $metaDataType.BaseType.Name -ne "Array") {
+            Write-Host "The data type passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = Convert-CloudMonitoringNotification -details $details -label $label -type $type -metadata $metadata
 
     try {
-        Invoke-RestMethod -URI $notificationUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method PUT
+        Invoke-RestMethod -URI $notificationUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method PUT
     } catch {
         Write-Host "Generic Error message that needs to be fixed here"
     }

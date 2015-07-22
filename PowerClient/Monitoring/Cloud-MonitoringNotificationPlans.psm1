@@ -7,11 +7,11 @@ function Add-CloudMonitoringNotificationPlan {
         [Parameter(Mandatory=$true)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [string] $criticalState,
+        [Object[]] $criticalState,
         [Parameter(Mandatory=$false)]
-        [string] $warningState,
+        [Object[]] $warningState,
         [Parameter(Mandatory=$false)]
-        [string] $okState,
+        [Object[]] $okState,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
     )
@@ -20,19 +20,20 @@ function Add-CloudMonitoringNotificationPlan {
     Set-Variable -Name jsonBody -Value $null
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data type passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = (Convert-CloudMonitoringNotificationPlan -label $label -criticalState $criticalState -warningState $warningState -okState $okState -metadata $metaData)
 
     Write-Debug "URI: `"$notificationPlanUri`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        Invoke-RestMethod -URI notificationPlanUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method POST
+        Invoke-RestMethod -URI $notificationPlanUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method POST
     } catch {
         Write-Host "Generic Error here"
     }
@@ -65,14 +66,14 @@ function Add-CloudMonitoringNotificationPlan {
 
 function Convert-CloudMonitoringNotificationPlan {
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [string[]] $criticalState,
+        [Object[]] $criticalState,
         [Parameter(Mandatory=$false)]
-        [string[]] $warningState,
+        [Object[]] $warningState,
         [Parameter(Mandatory=$false)]
-        [string[]] $okState,
+        [Object[]] $okState,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
     )
@@ -112,7 +113,7 @@ function Convert-CloudMonitoringNotificationPlan {
 
 function Get-CloudMonitoringNotificationPlan {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string []] $notificationPlanId
     )
 
@@ -122,7 +123,7 @@ function Get-CloudMonitoringNotificationPlan {
 
     if($notificationPlanId) { 
         $notificationPlanArray = [System.Collections.Generic.List[System.Object]] $notificationPlanId
-        $notificationPlanUri += "?${notificationPlanArray.Item(0)}" 
+        $notificationPlanUri += "?$($notificationPlanArray.Item(0))" 
         $notificationPlanArray.RemoveAt(0)
 
         foreach($n in $notificationPlanArray) {
@@ -132,12 +133,12 @@ function Get-CloudMonitoringNotificationPlan {
 
     Write-Debug "URI: `"$notificationPlanUri`""
     try {
-        $result = (Invoke-RestMethod -URI notificationPlanUri -Headers (Get-HeaderDictionary))
+        $result = (Invoke-RestMethod -URI $notificationPlanUri -Headers (Get-HeaderDictionary))
     } catch {
         Write-Host "Generic Error Here"
     }
 
-    if($notificationPlanId.Length -gt 1) {$result = $result.values}
+    if($notificationPlanId.Length -gt 0) {$result = $result.values}
     return $result
 <#
     .SYNOPSIS
@@ -179,6 +180,37 @@ function Get-CloudMonitoringNotificationPlans {
 #>
 }
 
+function Remove-CloudMonitoringNotificationPlan {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string] $notificationPlanId
+    )
+
+    Set-Variable -Name notificationPlanUri -Value ((Get-IdentityMonitoringURI) + "/notification_plans/$notificationPlanId" )
+
+    Write-Debug "URI: `"$notificationPlanUri`""
+    try {
+        Invoke-RestMethod -URI $notificationPlanUri -Headers (Get-HeaderDictionary) -Method DELETE
+    } catch {
+        Write-Host "Generic Error here"
+    }
+
+<#
+    .SYNOPSIS
+    Deletes a notification plan.
+
+    .DESCRIPTION
+    See synopsis.
+
+    .EXAMPLE
+    Delete-CloudMonitoringNotificationPlan -notificationPlanId <notificationPlanId>
+    Deletes the notification plan passed in.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notification-plans.html#DELETE_deleteNotifyPlan_notification_plans__notificationPlanId__service-notification-plans
+#>
+}
+
 function Update-CloudMonitoringNotificationPlan {
     param (
         [Parameter(Mandatory=$true)]
@@ -186,11 +218,11 @@ function Update-CloudMonitoringNotificationPlan {
         [Parameter(Mandatory=$false)]
         [string] $label,
         [Parameter(Mandatory=$false)]
-        [string[]] $criticalState,
+        [Object[]] $criticalState,
         [Parameter(Mandatory=$false)]
-        [string[]] $warningState,
+        [Object[]] $warningState,
         [Parameter(Mandatory=$false)]
-        [string[]] $okState,
+        [Object[]] $okState,
         [Parameter(Mandatory=$false)]
         [Object] $metadata
     )
@@ -199,19 +231,20 @@ function Update-CloudMonitoringNotificationPlan {
     Set-Variable -Name jsonBody -Value $null
 
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data type passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = (Convert-CloudMonitoringNotificationPlan -label $label -criticalState $criticalState -warningState $warningState -okState $okState -metadata $metaData)
 
     Write-Debug "URI: `"$notificationPlanUri`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        Invoke-RestMethod -URI notificationPlanUri -Body $jsonBody -Headers (Get-HeaderDictionary) -Method PUT
+        Invoke-RestMethod -URI $notificationPlanUri -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method PUT
     } catch {
         Write-Host "Generic Error here"
     }
@@ -250,33 +283,3 @@ function Update-CloudMonitoringNotificationPlan {
 #>
 }
 
-function Delete-CloudMonitoringNotificationPlan {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string] $notificationPlanId
-    )
-
-    Set-Variable -Name notificationPlanUri -Value ((Get-IdentityMonitoringURI) + "/notification_plans/$notificationPlanId" )
-
-    Write-Debug "URI: `"$notificationPlanUri`""
-    try {
-        Invoke-RestMethod -URI notificationPlanUri -Headers (Get-HeaderDictionary) -Method DELETE
-    } catch {
-        Write-Host "Generic Error here"
-    }
-
-<#
-    .SYNOPSIS
-    Deletes a notification plan.
-
-    .DESCRIPTION
-    See synopsis.
-
-    .EXAMPLE
-    Delete-CloudMonitoringNotificationPlan -notificationPlanId <notificationPlanId>
-    Deletes the notification plan passed in.
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-notification-plans.html#DELETE_deleteNotifyPlan_notification_plans__notificationPlanId__service-notification-plans
-#>
-}

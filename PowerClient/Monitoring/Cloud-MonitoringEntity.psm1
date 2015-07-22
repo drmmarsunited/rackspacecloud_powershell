@@ -11,7 +11,7 @@ function Add-CloudMonitoringEntity {
         [Parameter (Mandatory=$false)]
         [hashtable] $ip_addresses,
         [Parameter (Mandatory=$false)]
-        [string] $managed,
+        [boolean] $managed,
         [Parameter (Mandatory=$false)]
         [Object] $metadata,
         [Parameter (Mandatory=$false)]
@@ -22,19 +22,20 @@ function Add-CloudMonitoringEntity {
     Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+       $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data type passed is not of type Array or Hashtable."
+            return
+        }
     }
 
     $jsonBody = (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
 
     Write-Debug "URI: `"$entityUri`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        Invoke-RestMethod -URI $entityURI -Body $jsonBody -Headers (Get-HeaderDictionary) -Method POST
+        Invoke-RestMethod -URI $entityURI -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method POST
     } catch {
         Write-Host "Generic Error message that needs to be fixed here"
     }
@@ -123,7 +124,116 @@ function Convert-ClouldMonitorEntityParameters {
 #>
 }
 
-function Delete-CloudMonitoringEntity {
+function Get-CloudMonitoringEntities {
+    param (
+        [Parameter (Mandatory=$false)]
+        [string[]] $agentId,
+        [Parameter (Mandatory=$false)]
+        [string[]] $id
+    )
+    
+    Set-PSDebug -Strict
+
+    Set-Variable -Name entityURI -Value ((Get-IdentityMonitoringURI) + "/entities")
+    Set-Variable -Name appendToURI -Value $false
+    Set-Variable -Name workingArrayList -Value $null
+    Set-Variable -Name result -Value $null
+
+    if($agentId) {
+        $appendToURI = $true
+
+        $workingArrayList = [System.Collections.Generic.List[System.Object]] $agentId
+        $entityURI += "?agent_id=$($workingArrayList.Item(0))"
+        $workingArrayList.RemoveAt(0)
+
+        foreach($w in $workingArrayList) {
+            $entityURI += "&agent_id=$w"
+        }
+    }
+    if($id) {
+        $workingArrayList = [System.Collections.Generic.List[System.Object]] $id
+
+        if(-not $appendToURI) { 
+            $entityURI += "?id=$($workingArrayList.Item(0))"
+            $workingArrayList.RemoveAt(0)
+        }
+
+        foreach($w in $workingArrayList) {
+            $entityURI += "&id=$w"
+        }
+    }
+
+    Write-Debug "URI: `"$entityURI`""
+    try {
+        $result = (Invoke-RestMethod -URI $entityURI -Headers (Get-HeaderDictionary))
+    } catch {
+        Write-Host -ForegroundColor Red "Generic Error Message"
+    } finally {
+        Set-PSDebug -Off
+    }
+
+    return $result.values
+    
+<#
+    .SYNOPSIS
+    Returns the entities associated with the specified account.
+
+    .DESCRIPTION
+    The body of this function uses existing authentication functions and builds the necessary Powershell 
+    RestMethod request to return the list of entities. Depending on the parameters passed in, the entities can
+    be filtered based off the agent and/or id.
+    
+    .PARAMETER agentId
+    Array of strings representing the filter parameters. NOTE: This doesn't appear to be working as documented.
+
+    .PARAMETER id
+    Array of ids representing the filter parameters.
+
+    .EXAMPLE
+    Get-CloudMonitoringEntities
+    Returns all entities
+
+    .EXAMPLE
+    Get-CloudMonitoringEntities -agent_id 'agent1','agent2' -id '1','2','3'
+    This should return all the entities that meet those criteria. However, it appears the agent parameter is bugged and
+    not operational
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-entities.html#GET_listEntities_entities_service-entities
+#>
+}
+
+function Get-CloudMonitoringEntity {
+    param (
+        [Parameter (Position=0, Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string] $entityId
+    )
+
+    #This functionality is already built in for us in a different fashion.
+    Get-CloudMonitoringEntities -id $entityId
+
+<#
+    .SYNOPSIS
+    Returns the entity associated with the specified account.
+
+    .DESCRIPTION
+    This is supposed to be the implementation of the GET request for /entities/{entityId}, but the results are identical
+    to what's returned when passing /entities?id=$entityId, so this method just calles the other.
+    
+    .PARAMETER entityId
+    The entity to pass through to lookup.
+
+    .EXAMPLE
+    Get-CloudMonitoringEntity -entityId 'abcdegfh'
+    Returns information on that specific entity.
+
+    .LINK
+    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-entities.html#GET_getEntityId_entities__entityId__service-entities
+#>
+}
+
+function Remove-CloudMonitoringEntity {
     param (
         [Parameter (Position=0, Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -159,115 +269,6 @@ function Delete-CloudMonitoringEntity {
 #>
 }
 
-function Get-CloudMonitoringEntities {
-    param (
-        [Parameter (Mandatory=$false)]
-        [string[]] $agentId,
-        [Parameter (Mandatory=$false)]
-        [string[]] $id
-    )
-    
-    Set-PSDebug -Strict
-
-    Set-Variable -Name entityURI -Value ((Get-IdentityMonitoringURI) + "/entities")
-    Set-Variable -Name appendToURI -Value $false
-    Set-Variable -Name workingArrayList -Value $null
-    Set-Variable -Name result -Value $null
-
-    if($agentId) {
-        $appendToURI = $true
-
-        $workingArrayList = [System.Collections.Generic.List[System.Object]] $agentId
-        $entityURI += "?agent_id${workingArrayList.Item(0)}"
-        $workingArrayList.RemoveAt(0)
-
-        foreach($w in $workingArrayList) {
-            $entityURI += "&agent_id=$w"
-        }
-    }
-    elseif($id) {
-        $workingArrayList = [System.Collections.Generic.List[System.Object]] $id
-
-        if(-not $appendToURI) { 
-            $entityURI += "?id=${workingArrayList.Item(0)}"
-            $workingArrayList.RemoveAt(0)
-        }
-
-        foreach($w in $workingArrayList) {
-            $entityURI += "&id=$w"
-        }
-    }
-
-    Write-Debug "URI: `"$entityURI`""
-    try {
-        $result = (Invoke-RestMethod -URI $entityURI -Headers (Get-HeaderDictionary))
-    } catch {
-        Write-Host -ForegroundColor Red "Generic Error Message"
-    } finally {
-        Set-PSDebug -Off
-    }
-
-    return $result.values
-    
-<#
-    .SYNOPSIS
-    Returns the entities associated with the specified account.
-
-    .DESCRIPTION
-    The body of this function uses existing authentication functions and builds the necessary Powershell 
-    RestMethod request to return the list of entities. Depending on the parameters passed in, the entities can
-    be filtered based off the agent and/or id.
-    
-    .PARAMETER agentId
-    Array of strings representing the filter parameters.
-
-    .PARAMETER id
-    Array of ids representing the filter parameters.
-
-    .EXAMPLE
-    Get-CloudMonitoringEntities
-    Returns all entities
-
-    .EXAMPLE
-    Get-CloudMonitoringEntities -agent_id 'agent1','agent2' -id '1','2','3'
-    This should return all the entities that meet those criteria. However, it appears the agent parameter is bugged and
-    not operational
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-entities.html#GET_listEntities_entities_service-entities
-#>
-}
-
-function Get-CloudMonitoringEntity {
-    param (
-        [Parameter (Position=0, Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string] $entityId
-    )
-
-    #This functionality is already built in for us in a different fashion.
-    Get-CloudMonitoringEntities -id $entityId
-
-<#
-    .SYNOPSIS
-    Returns the entity associated with the specified account.
-
-    .DESCRIPTION
-    This is supposed to be the implementation of the GET request for /entities/{entityId}, but the results are identical
-    to what's returned when passing /entities?id=$entityId, so this method just calles the other.
-    
-    .PARAMETER entityId
-    The entity to pass through to lookup.
-
-    .EXAMPLE
-    Get-CloudMonitoringEntity -entityId 'abcdegfh'
-    Returns information on that specific entity.
-
-    .LINK
-    http://docs.rackspace.com/cm/api/v1.0/cm-devguide/content/service-entities.html#GET_getEntityId_entities__entityId__service-entities
-#>
-}
-
 function Update-ClouldMonitoringEntity {
     param (
         [Parameter (Position=0, Mandatory=$true)]
@@ -280,7 +281,7 @@ function Update-ClouldMonitoringEntity {
         [Parameter (Mandatory=$false)]
         [hashtable] $ip_addresses,
         [Parameter (Mandatory=$false)]
-        [string] $managed,
+        [boolean] $managed,
         [Parameter (Mandatory=$false)]
         [Object] $metadata,
         [Parameter (Mandatory=$false)]
@@ -291,20 +292,20 @@ function Update-ClouldMonitoringEntity {
     Set-Variable -Name jsonBody -Value $null
     
     if($metadata) {
-        $metaDataType = $metadata.GetType().BaseType.Name
+        $metaDataType = $metadata.GetType().Name
 
-        if( -not( @("Array", "Hashtable") -match $metaDataType) ) {
-        Write-Host "The data type passed is not of type Array or Hashtable."
-        return
+        if( -not( @("Object[]", "Hashtable") -match $metaDataType) ) {
+            Write-Host "The data type passed is not of type Array or Hashtable."
+            return
+        }
     }
     
     $jsonBody = (Convert-ClouldMonitorEntityParameters -label $label -agent_id $agent_id -ip_addresses $ip_addresses -managed $managed -metadata $metadata -uri $uri)
 
-    $entityUri += "/$entityId"
     Write-Debug "URI: `"$entityUri`""
-    Write-Debug "JSON Body: $jsonBody"
+    Write-Debug "Body: `n$jsonBody"
     try {
-        Invoke-RestMethod -URI $entityURI -Body $jsonBody -Headers (Get-HeaderDictionary) -Method PUT
+        Invoke-RestMethod -URI $entityURI -Body $jsonBody -ContentType application/json -Headers (Get-HeaderDictionary) -Method PUT
     } catch {
         Write-Host "Generic Error message that needs to be fixed here"
     }

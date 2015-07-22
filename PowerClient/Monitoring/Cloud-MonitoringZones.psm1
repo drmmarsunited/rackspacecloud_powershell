@@ -5,7 +5,7 @@
 function Get-CloudMonitoringZone {
     param (
         [Parameter (Position=0, Mandatory=$true)]
-        [string] zoneId
+        [string] $zoneId
     )
 
     try {
@@ -61,7 +61,7 @@ function Get-CloudMonitoringZones {
 function Get-CloudMonitoringZoneHelper {
     param (
         [Parameter (Position=0, Mandatory=$false)]
-        [string] zoneId = $null
+        [string] $zoneId = $null
     )
 
     Set-Variable -Name cloudMonitoringURI -Value ((Get-IdentityMonitoringURI) + "/monitoring_zones")
