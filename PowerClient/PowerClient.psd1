@@ -60,7 +60,8 @@ DotNetFrameworkVersion = '2.0'
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
 NestedModules = @(
-    'Authentication.psm1',
+    '.\Authentication.psm1',
+    '.\Core.psm1',
     '.\Monitoring\Cloud-MonitoringAlarms.psm1',
     '.\Monitoring\Cloud-MonitoringChecks.psm1',
     '.\Monitoring\Cloud-MonitoringEntity.psm1',
@@ -84,8 +85,9 @@ AliasesToExport = '*'
 
 # List of all modules packaged with this module
 ModuleList = @(
-    'Authentication.psm1',
-    'IdentityProvider.psm1',
+    '.\Authentication.psm1',
+    '.\Core.psm1',
+    '.\IdentityProvider.psm1',
     '.\Monitoring\Cloud-MonitoringAlarms.psm1',
     '.\Monitoring\Cloud-MonitoringChecks.psm1',
     '.\Monitoring\Cloud-MonitoringEntity.psm1',

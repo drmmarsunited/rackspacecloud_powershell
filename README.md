@@ -140,19 +140,14 @@ The way this script is built is as a Powershell module. Start by downloading as 
     
     a.	%UserProfile%\Documents\WindowsPowerShell\Modules
 
-For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above.  Once you’ve placed the folder in its new location, edit the “RSCloud.psm1” with Notepad (or you’re preferred text editor). In this file, the following lines need to be edited with you Rackspace cloud account information (place your information between the double quotes):
+For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above. Once done, please invoke the following cmdlets to set the authentication for the program.
 
 ```Powershell
-
-## Define Global Variables Needed for API Comms ##
-
-Set-Variable -Name CloudUsername -Value "" -Scope Global
-Set-Variable -Name CloudAPIKey -Value "" -Scope Global
-Set-Variable -Name CloudDDI -Value "" -Scope Global
-## *The CloudDDI variable is your account number or tenant ID.  This can be found at the top right of your screen when logged into the Rackspace Cloud Control Panel*
+Set-AccountAuthentication -CloudUsername 'username' -CloudAPIKey 'key' -CloudDDI ddi
+Set-CoreAccountAuthentication -CloudUsername 'username' -CloudAPIKey 'key' -CloudDDI ddi
 ```
 
-After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
+Having to set two authentication commands prior to using the module is not ideal. Additional work will be done moving forward to simplify this process.
 
 <h2>Are there any other sources for information or tips for PowerClient?</h2>
 
