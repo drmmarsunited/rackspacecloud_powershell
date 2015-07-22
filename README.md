@@ -2,15 +2,10 @@
 
 <h2> CRITICAL UPDATE</h2>
 
-On July 19th, Rackspace (in following with OpenStack developments) will disable all XML support within it's cloud API(s).  At the moment, I do not have the time required to update this client to completely use JSON for all of its requests/responses.  I am asking for help with this effort from the community at large, if any of you can spare the time.
+As of July 16th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
 
-If not, there is another PowerShell client called "PoshStack" that can be downloaded from here:
-
-[PoshStack] (https://github.com/DonSchenck/PoshStack)
-
-Further information on PoshStack can be found here:
-
-[PoshStack Dev Blog] (https://developer.rackspace.com/blog/Introducing-PoshStack-the-PowerShell-client-for-OpenStack/)
+* Dynamic endpoint URL retrieval from service catalog returned with auth token
+* Cloud Server password resets now have their own cmdlet: Update-CloudServerPassword
 
 <h2>Who am I and why should you use this client?</h2>
 
