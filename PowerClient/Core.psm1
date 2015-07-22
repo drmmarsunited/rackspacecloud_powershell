@@ -1,7 +1,7 @@
 ﻿## Info ##
 ## Author: Mitch Robins (mitch.robins) ##
 ## Description: PSv3 module for NextGen Rackspace Cloud API interaction (PowerClient)##
-## Version 2.0 ##
+## Version 2.1 ##
 ## Contact Info: mitch.robins@rackspace.com ##
 
 ## Define Global Variables Needed for API Comms ##
@@ -28,10 +28,8 @@ $ImageListTable = @{Expression={$_.id};Label="Image ID";width=38},
 $ServerListTable = @{Expression={$_.id};Label="Server ID";width=38}, 
 @{Expression={$_.Name};Label="Server Name";width=40}, 
 @{Expression={$_.Status};Label="Server Status";width=15}, 
-@{Expression={$_.addresses.network.ip.addr};Label="Server IP Addresses";width=200}
 
-$NetworkListTable = @{Expression={$_.label};Label="Network Name";width=25}, 
-@{Expression={$_.cidr};Label="Assigned Block";width=30}, 
+$NetworkListTable = @{Expression={$_.name};Label="Network Name";width=25},  
 @{Expression={$_.id};Label="Network ID";width=33}
 
 $LBListTable = @{Expression={$_.id};Label="CLB ID";width=15}, 
@@ -193,7 +191,102 @@ Set-Alias -Name rclbcl -Value Remove-ConnectionLogging
 Set-Alias -Name rclbct -Value Remove-ConnectionThrottling
 #>
 
-## Define Functions
+## Build base service URLs and URIs
+function Get-URI ($service, $region) {
+
+    $Endpoint = Get-CloudEndpoints $service | where {$_.region -eq $region}
+    $Global:URL = $Endpoint.publicURL
+
+    $Global:serversURI = "/servers"
+    $Global:serversDetailURI = "/servers/detail"
+    $Global:serversActionURI = "/servers/$CloudServerID/action"
+    $Global:flavorsURI = "/flavors"
+    $Global:flavorsDetailURI = "$flavorsURI/detail"
+    $Global:imagesURI = "/images"
+    $Global:imagesDetailURI = "$imagesURI/detail"
+    $Global:volumesURI = "/servers/$CloudServerID/os-volume_attachments"
+    $Global:networksURI = "/networks"
+    $Global:subnetsURI = "/subnets"
+    $Global:blockstoragevolumesURI = "/volumes"
+    $Global:blockstoragevolumetypesURI = "/types"
+    $Global:loadbalancersURI = "/loadbalancers"
+    $Global:loadbalancersDetailURI = "$loadbalancersURI/$CloudLBID"
+    $Global:loadbalancersSessionURI = "$loadbalancersDetailURI/sessionpersistence"
+    $Global:loadbalancersCachingURI = "$loadbalancersDetailURI/contentcaching"
+    $Global:loadbalancersLogURI = "$loadbalancersDetailURI/connectionlogging"
+    $Global:loadbalancersACLURI = "$loadbalancersDetailURI/accesslist"
+    $Global:loadbalancersThrottleURI = "$loadbalancersDetailURI/connectionthrottle"
+    $Global:loadbalancersHealthURI = "$loadbalancersDetailURI/healthmonitor"
+    $Global:loadbalancersSSLURI = "$loadbalancersDetailURI/ssltermination"
+    $Global:loadbalancersACLDetailURI = "$loadbalancersACLURI/$ACLItemID"
+    $Global:loadbalancersProtocolURI = "$loadbalancersURI/protocols"
+    $Global:loadbalancersAlgorithmURI = "$loadbalancersURI/algorithms"
+    $Global:loadbalancersNodeURI = "$loadbalancersURI/$CloudLBID/nodes"
+    $Global:loadbalancersNodeEventsURI = "$loadbalancersNodeURI/events"
+    $Global:loadbalancersNodeDetailURI = "$loadbalancersNodeURI/$CloudLBNodeID"
+} 
+
+## DEFINE FUNCTIONS
+
+## Global API Call
+function Get-APIRequest {
+    Param(
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $URI
+        )
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Method Get
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
+
+function Add-APIRequest {
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $URI,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $Body
+        )
+
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $Body -ContentType application/json -Method Post
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
+
+function Update-APIRequest {
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $URI,
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $Body
+        )
+
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $Body -ContentType application/json -Method Put
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
+
+function Remove-APIRequest {
+    Param(
+        [Parameter (Position=1, Mandatory=$true)]
+        [string] $URI
+        )
+    Try {
+        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Method Delete
+        }
+    Catch {
+        Write-Host "There has been an API call error:" $Error[0]
+          }
+    }
+ 
 
 ## Region mismatch 
 function Send-RegionError {
@@ -207,7 +300,11 @@ function Send-RegionError {
 
 function Get-AuthToken {
     ## Check for current authentication token and retrieves a new one if needed
-        if ((Get-Date) -ge $token.access.token.expires) {
+        if (($CloudUsername -eq "") -or ($CloudAPIKey -eq "") -or ($CloudDDI -eq "")) {
+            Write-Host "You are missing critical authentication details.  Please make sure you've entered a username, API key, and DDI (account number) in the module."
+            }
+        
+        elseif ((Get-Date) -ge $token.access.token.expires) {
                 Pop-AuthToken
             }
 
@@ -217,23 +314,60 @@ function Get-AuthToken {
 function Pop-AuthToken() {
     
     ## Setting variables needed for function execution
-    Set-Variable -Name AuthURI -Value "https://identity.api.rackspacecloud.com/v2.0/tokens.xml"
+    Set-Variable -Name AuthURI -Value "https://identity.api.rackspacecloud.com/v2.0/tokens"
     Set-Variable -Name AuthBody -Value ('{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"'+$CloudUsername+'", "apiKey":"'+$CloudAPIKey+'"}}}')
 
     ## Making the call to the token authentication API and saving it's output as a global variable for reference in every other function.
     Set-Variable -Name token -Value (Invoke-RestMethod -Uri $AuthURI -Body $AuthBody -ContentType application/json -Method Post) -Scope Global
     
-    Set-Variable -Name CloudServerRegionListStep0 -Value ($token.access.serviceCatalog.service | Where-Object {$_.type -eq "compute"})
-    Set-Variable -Name CloudServerRegionList -Value ($CloudServerRegionListStep0.endpoint)
-
-    
     $FinalToken = $token.access.token.id
-    
+    $Global:Catalog = $token.access.serviceCatalog
     
 
     ## Headers in powershell need to be defined as a dictionary object, so here I'm creating a dictionary object with the newly granted token. It's global, as it's needed in every future request.
     Set-Variable -Name HeaderDictionary -Value (new-object "System.Collections.Generic.Dictionary``2[[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]") -Scope Global
     $HeaderDictionary.Add("X-Auth-Token", $finaltoken)
+}
+
+function Get-CloudEndpoints ($CloudProduct){
+    switch ( $CloudProduct ) {
+        "cloudNetworks"  {
+            return ( $catalog | `
+                where { $_.name -eq "cloudNetworks" } ).endpoints | `
+                select region, publicURL
+            }
+        "cloudServers"  {
+            return ( $catalog | `
+                where { $_.name -eq "cloudServersOpenStack" } ).endpoints | `
+                select region, publicURL
+            }
+        "cloudBlockStorage" {
+            return ( ($catalog | `
+                where { $_.type -eq "volume" }).endpoints | `
+                select region, publicURL )
+        }
+        "cloudLoadBalancers" {
+            return ( ($catalog | `
+                where {$_.name -eq "cloudLoadBalancers" -and $_.type -eq "rax:load-balancer"}).endpoints | `
+                select region, publicURL)
+        }
+        "cloudFiles" {
+            return ( ($catalog | `
+                where { $_.type -eq "object-store" }).endpoints | `
+                select region, publicURL)  
+                }
+        "cloudDNS" {
+            return ( ($catalog | `
+                where { $_.type -eq "rax:dns" }).endpoints | `
+                select region, publicURL)
+        }
+        "cloudMonitoring" {
+            return ( ($catalog | `
+                where { $_.type -eq "rax:monitor" }).endpoints | `
+                select region, publicURL)
+        }
+                            
+    }
 }
 
 
@@ -247,7 +381,8 @@ function Get-CloudServerImages {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/detail.xml"
+    Get-URI cloudServers $Region
+	$URI = "$URL$imagesDetailURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region){
@@ -256,11 +391,10 @@ if ($RegionList -contains $Region){
     Get-AuthToken
 
     ## Making the call to the API for a list of available server images and storing data into a variable
-    [xml]$ServerImageListRegionStep0 = (Invoke-RestMethod -Uri $RegionImageURI  -Headers $HeaderDictionary)
-    [xml]$ServerImageListRegionFinal = ($ServerImageListRegionStep0.innerxml)
+    Get-APIRequest $URI
 
-    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-    $ServerImageListRegionFinal.Images.Image | Sort-Object Name | ft $ImageListTable -AutoSize
+    ## Use dot notation to show the information needed without further parsing.
+    $Response.Images | Sort-Object Name | ft $ImageListTable -AutoSize
     }
 
 else {
@@ -307,12 +441,13 @@ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/Images-d1e4427.html
 function Get-CloudServers{
 
     Param(
-        [Parameter (Position=0, Mandatory=$false)]
+        [Parameter (Position=0, Mandatory=$true)]
         [string] $Region
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/detail.xml"
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversDetailURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -321,11 +456,10 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available servers and storing data into a variable
-    [xml]$ServerListStep0 = (Invoke-RestMethod -Uri $RegionServerURI  -Headers $HeaderDictionary)
-    [xml]$ServerListFinal = ($ServerListStep0.innerxml)
+    Get-APIRequest $URI
 
     ## Handling empty response bodies indicating that no servers exist in the queried data center
-    if ($ServerListFinal.Servers.Server -eq $null) {
+    if ($Response.Servers.id -eq $null) {
 
         Write-Host "You do not currently have any Cloud Servers provisioned in the $Region region."
 
@@ -334,8 +468,8 @@ if ($RegionList -contains $Region) {
     ## See first "if" block for notes on each line##
     else {
         
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $ServerListFinal.Servers.Server | Sort-Object Name | ft $ServerListTable -AutoSize
+        ## Use dot notation to show the information needed without further parsing.
+       $Response.Servers | Sort-Object Name | ft $ServerListTable -AutoSize
 
     }
 
@@ -380,58 +514,33 @@ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/List_Servers-d1e207
 function Get-CloudServerDetails {
 
     Param(
-        [Parameter(Position=0,Mandatory=$false)]
-        [switch]$Bandwidth,
-        [Parameter(Position=1,Mandatory=$true)]
+        [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudServerID,
-        [Parameter(Position=2,Mandatory=$true)]
+        [Parameter(Position=1,Mandatory=$true)]
         [string]$Region
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name RegionServerDetailURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID.xml"
-
-if ($Bandwidth) {
-
-    if ($RegionList -contains $Region) {
-
-    Get-AuthToken
-
-    [xml]$ServerDetailStep0 = (Invoke-RestMethod -Uri $RegionServerDetailURI  -Headers $HeaderDictionary -Method Get)
-    [xml]$ServerDetailFinal = ($ServerDetailStep0.innerxml)
-
-    $ServerDetailFinal.server | Format-Table $ServerBandwidthTable -AutoSize
-
-    }
-
-    else {
-
-    Send-RegionError
-
-    }
-
-}
-
-else {
+        Get-URI cloudServers $Region
+        $URI = "$URL$serversURI/$CloudServerID"
 
     if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    [xml]$ServerDetailStep0 = (Invoke-RestMethod -Uri $RegionServerDetailURI  -Headers $HeaderDictionary -Method Get)
-    [xml]$ServerDetailFinal = ($ServerDetailStep0.innerxml)
+    Get-APIRequest $URI
     
         Write-Host ` '
-    Server Status: '($ServerDetailFinal.server.status)'
-    Server Name: '($ServerDetailFinal.server.name)'
-    Server ID: '($ServerDetailFinal.server.id)'
-    Server Created: '($ServerDetailFinal.server.created)'
-    Server Last Updated: '($ServerDetailFinal.server.updated)'
-    Server Image ID: '($ServerDetailFinal.server.image.id)'
-    Server Flavor ID: '($ServerDetailFinal.server.flavor.id)'
-    Server IPv4: '($ServerDetailFinal.server.accessIPv4)'
-    Server IPv6: '($ServerDetailFinal.server.accessIPv6)'
-    Server Build Progress: '($ServerDetailFinal.server.progress)''
+    Server Status: '($Response.server.status)'
+    Server Name: '($Response.server.name)'
+    Server ID: '($Response.server.id)'
+    Server Created: '($Response.server.created)'
+    Server Last Updated: '($Response.server.updated)'
+    Server Image ID: '($Response.server.image.id)'
+    Server Flavor ID: '($Response.server.flavor.id)'
+    Server IPv4: '($Response.server.accessIPv4)'
+    Server IPv6: '($Response.server.accessIPv6)'
+    Server Build Progress: '($Response.server.progress)''
 
     }
 
@@ -441,7 +550,6 @@ else {
 
     }
 
-}
 <#
  .SYNOPSIS
  The Get-CloudServerDetails cmdlet will pull down a list of detailed information for a specific Rackspace Cloud Server.
@@ -492,16 +600,16 @@ function Get-CloudServerFlavors() {
     )
 
     ## Setting variables needed to execute this function
-	Set-Variable -Name RegionFlavorURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/flavors/detail.xml"
+    Get-URI cloudServers $Region
+    $URI = "$URL$flavorsDetailURI"
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    [xml]$ServerFlavorListStep0 = (Invoke-RestMethod -Uri $RegionFlavorURI  -Headers $HeaderDictionary)
-    [xml]$ServerFlavorListFinal = ($ServerFlavorListStep0.innerxml)
+    Get-APIRequest $URI
     
-    $ServerFlavorListFinal.Flavors.Flavor | Sort-Object id | ft $FlavorListTable -AutoSize
+    $Response.Flavors | Sort-Object id | ft $FlavorListTable -AutoSize
     }
 
 else {
@@ -555,19 +663,19 @@ function Get-CloudServerAttachments {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name RegionServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Get-URI cloudServers $Region
+    $URI = "$URL$volumesURI"
 
  if ($RegionList -contains $Region) {
         
-        [xml]$CloudServerAttachmentsStep0 = Invoke-RestMethod -Uri $RegionServerURI -Headers $HeaderDictionary -Method Get
-        [xml]$CloudServerAttachmentsFinal = $CloudServerAttachmentsStep0.InnerXml
+        Get-APIRequest $URI
 
-            if (!$CloudServerAttachmentsFinal.volumeAttachments) {
+            if ($Response.volumeAttachments.Count -eq 0) {
                 Write-Host "This cloud server has no cloud block storage volumes attached." -ForegroundColor Red
             }
 
             else {
-                $CloudServerAttachmentsFinal.volumeAttachments.volumeAttachment | ft $ServerAttachmentsTable -AutoSize
+                $Response.volumeAttachments.volumeAttachment | ft $ServerAttachmentsTable -AutoSize
             }
     }
 
@@ -597,7 +705,7 @@ else {
 
  .EXAMPLE
  PS C:\Users\Administrator> Get-CloudServerAttachments -CloudServerID 30e52067-e3ba-4bf6-98df-4e9b0e83e205 -Region DFW
- This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the ORD region.
+ This example shows how to retrieve a list of all attached cloud block storage volumes of the specified cloud server in the DFW region.
 
 PS C:\Users\mitch.robins> Get-CloudServerAttachments -CloudServerID 30e52067-e3ba-4bf6-98df-4e9b0e83e205 -Region DFW
 
@@ -633,66 +741,95 @@ function Add-CloudServer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NewServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers.xml"
+        Get-URI cloudServers $Region
+        $URI = "$URL$serversURI"
 
     if ($CloudServerNetwork1ID) {
 
 
         if ($Isolated) {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                </networks>
-            </server>'
+            $Body = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }
+        ]
+    }
+}'
             }
 
             else {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-	imageRef="'+$CloudServerImageID+'" 
-	flavorRef="'+$CloudServerFlavorID+'" 
-	name="'+$CloudServerName+'">
-	<networks>
-		<uuid>00000000-0000-0000-0000-000000000000</uuid>
-		<uuid>11111111-1111-1111-1111-111111111111</uuid>
-		<uuid>'+$CloudServerNetwork1ID+'</uuid>
-	</networks>
-</server>'
+            $Body = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "00000000-0000-0000-0000-000000000000"
+            }, 
+            {
+                 "uuid": "11111111-1111-1111-1111-111111111111"
+            } 
+        ]
+    }
+}'
             }
     }
 
     elseif ($CloudServerNetwork2ID) {
 
             if ($Isolated) {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                </networks>
-            </server>'
+            $Body = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            }
+        ]
+    }
+}'
             }
 
             else {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                    <uuid>00000000-0000-0000-0000-000000000000</uuid>
-                    <uuid>11111111-1111-1111-1111-111111111111</uuid>
-                </networks>
-            </server>'
+            $Body = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            }, 
+            {
+                 "uuid": "00000000-0000-0000-0000-000000000000"
+            }, 
+            {
+                 "uuid": "11111111-1111-1111-1111-111111111111"
+            } 
+        ]
+    }
+}'
             }
 
     }
@@ -700,55 +837,69 @@ function Add-CloudServer {
     elseif ($CloudServerNetwork3ID) {
 
             if ($Isolated) {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork3ID+'</uuid>
-                </networks>
-            </server>'
+            $Body = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork3ID+'"
+            } 
+        ]
+    }
+}'
             }
 
             else {
-            [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-                <networks>
-                    <uuid>'+$CloudServerNetwork1ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork2ID+'</uuid>
-                    <uuid>'+$CloudServerNetwork3ID+'</uuid>
-                    <uuid>00000000-0000-0000-0000-000000000000</uuid>
-                    <uuid>11111111-1111-1111-1111-111111111111</uuid>
-                </networks>
-            </server>'
+            $Body = '{
+    "server" : {
+        "name" : "'+$CloudServerName+'",
+        "imageRef" : "'+$CloudServerImageID+'",
+        "flavorRef" : "'+$CloudServerFlavorID+'",
+        "OS-DCF:diskConfig" : "AUTO",
+        "networks": [
+            {
+                 "uuid": "'+$CloudServerNetwork1ID+'"
+            }, 
+            {
+                 "uuid": "'+$CloudServerNetwork2ID+'"
+            },
+            {
+                 "uuid": "'+$CloudServerNetwork3ID+'"
+            },
+            {
+                 "uuid": "00000000-0000-0000-0000-000000000000"
+            }, 
+            {
+                 "uuid": "11111111-1111-1111-1111-111111111111"
+            } 
+        ]
+    }
+}'
             }
     }
 
     else {
-    [xml]$NewCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-            <server xmlns="http://docs.openstack.org/compute/api/v1.1" 
-                imageRef="'+$CloudServerImageID+'"
-                flavorRef="'+$CloudServerFlavorID+'"
-                name="'+$CloudServerName+'">
-            </server>'
+    $Body = '{"server":{"name":"'+$CloudServerName+'","imageRef":"'+$CloudServerImageID+'","flavorRef":"'+$CloudServerFlavorID+'","OS-DCF:diskConfig":"AUTO"}}'
             }
  
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        $NewCloudServer = Invoke-RestMethod -Uri $NewServerURI -Headers $HeaderDictionary -Body $NewCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-        $NewCloudServerInfo = $NewCloudServer.innerxml
+        Add-APIRequest $URI $Body
 
         Write-Host "The following is the ID and password of your new server. Please wait 10 seconds for a refreshed Cloud Server list."
 
-        $NewCloudServer.Server | ft $newservertable
+        $Response.Server | ft $newservertable
 
         Sleep 10
 
@@ -814,19 +965,16 @@ function Add-CloudServerImage {
         )
     
     ## Setting variables needed to execute this function
-    $NewImageXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<createImage
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    name="'+$NewImageName+'">
-</createImage>'
+    $Body = '{"createImage" : {"name" : "'+$NewImageName+'"} }'
+
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
-    
-    Set-Variable -Name ServerImageURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerImageURI -Headers $HeaderDictionary -Body $NewImageXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Add-APIRequest $URI $Body
 
     Write-Host "Your new Rackspace Cloud Server image is being created."
 
@@ -872,71 +1020,48 @@ function Update-CloudServer {
         [switch]$UpdateIPv4Address, 
         [Parameter(Mandatory=$false)]
         [switch]$UpdateIPv6Address,
-        [Parameter(Mandatory=$false)]
-        [switch]$UpdateAdminPassword,
         [Parameter(Mandatory=$true)]
         [string]$CloudServerID,
         [Parameter(Mandatory=$true)]
         [string]$Region,
         [Parameter(Mandatory=$true)]
-        [string]$NewNameOrAddressOrPasswordValue
+        [string]$NewValue
         )
 
-if ($RegionList -contains $Region) {
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversURI/$CloudServerID"
 
     if ($UpdateName) {
 
-    ## Setting variables needed to execute this function
-    [xml]$UpdateCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <server
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        name="'+$NewNameOrAddressOrPasswordValue+'"/>'
-                
-    Get-AuthToken
-    
-    Set-Variable -Name ServerUpdateURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
-
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
-                
-    Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
-
-    Sleep 10
-
-    Get-CloudServers $Region
-                
-                }
+    $Body = '{
+  "server" :
+    {
+        "name" : "'+$NewValue+'"
+    }
+}'
+    }
 
     elseif ($UpdateIPv4Address) {
 
-    [xml]$UpdateCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <server
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        accessIPv4="'+$NewNameOrAddressOrPasswordValue+'"
-        accessIPv6="'+$IPv6+'"
-    />'
+    $Body = '{
+  "server" :
+    {
+        "accessIPv4" : "'+$NewValue+'"
+    }
+}'
     
-    Get-AuthToken
-    
-    Set-Variable -Name ServerUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
-
-    Invoke-RestMethod -Uri $ServerUpdateURI -Headers $HeaderDictionary -Body $UpdateCloudServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
-
-    Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
-
-    Sleep 10
-
-    Get-CloudServers $Region
-                    
-                    }
+    }
 
     elseif ($UpdateIPv6Address) {
 
     ## Setting variables needed to execute this function
-    [xml]$UpdateCloudServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <server
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        accessIPv6="'+$NewNameOrAddressOrPasswordValue+'"
-    />'
+    $Body = '{
+  "server" :
+    {
+        "accessIPv6" : "'+$NewValue+'"
+    }
+}'
     
     Get-AuthToken
     
@@ -952,23 +1077,105 @@ if ($RegionList -contains $Region) {
                     
                     }
 
-    elseif ($UpdateAdminPassword) {
-    
-    ## Setting variables needed to execute this function
-    [xml]$UpdateAdminPasswordXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <changePassword
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    adminPass="'+$NewNameOrAddressOrPasswordValue+'"/>'
+if ($RegionList -contains $Region) {
 
     Get-AuthToken
-    
-    Set-Variable -Name ServerPasswordUpdateURI -Value "https://dfw.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
 
-    Invoke-RestMethod -Uri $ServerPasswordUpdateURI -Headers $HeaderDictionary -Body $UpdateAdminPasswordXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Update-APIRequest $URI $Body | Out-Null
+                
+    Write-Host "Your Cloud Server has been updated. Please wait 10 seconds for a refreshed Cloud Server list."
+
+    Sleep 10
+
+    Get-CloudServers $Region
+
+}
+
+else {
+
+    Send-RegionError
+    }
+
+
+<#
+ .SYNOPSIS
+ This command will update the name, IPv4/IPv6 address, and/or the administrative/root password of your Rackspace Cloud Server.
+
+ .DESCRIPTION
+ Using this command, you will be able to update: 
+ 
+ 1) The name of the Cloud Server
+ 2) The IPv4/IPv6 address
+ 3) The administrative/root password
+ 
+ The usage of the command would look like this "Update-CloudServer -Switch NewValue".
+
+ .PARAMETER UpdateName
+ Using this switch would indicate that you would like to change the name of your Rackspace Cloud server.
+
+ .PARAMETER UpdateIPv4Address
+ Using this switch would indicate that you would like to change the IPv4 address of your Rackspace Cloud server.
+
+ .PARAMETER UpdateIPv6Address
+ Using this switch would indicate that you would like to change the IPv6 address of your Rackspace Cloud server.
+
+ .PARAMETER UpdateAdminPassword
+ Using this switch would indicate that you would like to change the adminitrative/root password within your Rackspace Cloud Server.
+
+ .PARAMETER CloudServerID
+ This field is meant to be the 32 character identifier of your Rackspace Cloud Server.  If you need to figure out the ID, run the "Get-CloudServers" command to retrieve a full list of servers and their IDs from your account.
+
+ .PARAMETER NewNameOrAddressOrPasswordValue
+ This field is where you would enter the *new* value of whatever you are trying to change.  If you are changing the name of the Rackspace Cloud Server, this is where you would enter the new name.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Update-CloudServer -UpdateName abc123ef-9876-abcd-1234-123456abcdef  New-Windows-Web-Server
+ This example shows the command to rename a Rackspace Cloud Server with an ID of "abc123ef-9876-abcd-1234-123456abcdef" to a new name of "New-Windows-Web-Server".
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Update-CloudServer -UpdateAdminPassword abc123ef-9876-abcd-1234-123456abcdef  NewC0mplexPassw0rd!
+ This example shows the command to update the adminsitrative password of a Rackspace Cloud Server with an ID of "abc123ef-9876-abcd-1234-123456abcdef" to a new password of "NewC0mplexPassw0rd!".
+
+ .LINK
+ http://docs.rackspace.com/servers/api/v2/cs-devguide/content/ServerUpdate.html
+
+#>
+}
+
+function Update-CloudServerPassword {
+
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$CloudServerID,
+        [Parameter(Mandatory=$true)]
+        [string]$Region,
+        [Parameter(Mandatory=$true)]
+        [string]$NewValue
+        )
+
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
+
+    $Body = '{
+   "changePassword":
+      {
+         "adminPass": "'+$NewValue+'"
+      }
+}'
+
+if ($RegionList -contains $Region) {
+
+    Get-AuthToken
+
+    Add-APIRequest $URI $Body | Out-Null
 
     Write-Host "Your Cloud Server has been updated."
-                        }
-    }
+
+}
 
 else {
 
@@ -1035,34 +1242,33 @@ function Restart-CloudServer {
         [switch]$Hard
         )
 
-## Setting variables needed to execute this function
-$RestartServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<reboot
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    type="SOFT"/>'
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
+
+    if ($hard) {
+        $Body = '{
+        "reboot" : {
+            "type" : "HARD"
+        }
+    }'
+               }
+    else {
+    
+    $Body = '{
+        "reboot" : {
+            "type" : "SOFT"
+        }
+    }'
+        }
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    Set-Variable -Name ServerRestartURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Add-APIRequest $URI $Body
 
-    Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-    Write-Host "Your Cloud Server will be soft rebooted based on your input."
-
-        if ($hard) {
-        $RestartServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-        <reboot
-        xmlns="http://docs.openstack.org/compute/api/v1.1"
-        type="HARD"/>'
-
-        Set-Variable -Name ServerRestartURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action" -Scope Global
-
-        Invoke-RestMethod -Uri $ServerRestartURI -Headers $HeaderDictionary -Body $RestartServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-        Write-Host "Your Cloud Server will be hard rebooted based on your input."
-                }
+    Write-Host "Your Cloud Server is now being rebooted based on your input.  Please allow a few seconds for the reboot to begin"
 
     }
 
@@ -1111,54 +1317,47 @@ function Resize-CloudServer {
         [string]$CloudServerFlavorID
         )
 
-if ($RegionList -contains $Region) {    
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
     
     if ($Confirm) {
       
-      ## Setting variables needed to execute this function
-      $ConfirmServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-      <confirmResize
-      xmlns="http://docs.openstack.org/compute/api/v1.1"/>'
+    $Body = '{
+"confirmResize" : null
+}'
 
-      Set-Variable -Name ServerConfirmURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-      Write-Host "Your resized server has been confirmed."
-
+    $Out = "Your server resize has been confirmed."
             }
     
     elseif ($Revert) {
       
       ## Setting variables needed to execute this function
-      $ConfirmServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-      <revertResize
-      xmlns="http://docs.openstack.org/compute/api/v1.1"/>'
+    $Body = '{
+    "revertResize" : null
+}'
 
-      Set-Variable -Name ServerConfirmURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-      Invoke-RestMethod -Uri $ServerConfirmURI -Headers $HeaderDictionary -Body $ConfirmServerXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-
-      Write-Host "Your resized server has been confirmed."
-
+    $Out = "Your server resize has been reverted."
             }
     
     else {
     
     ## Setting variables needed to execute this function
-    $OptimizeServerXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <resize xmlns="http://docs.openstack.org/compute/api/v1.1"
-    flavorRef="'+$CloudServerFlavorID+'"/>'
-
-    Get-AuthToken
-    
-    Set-Variable -Name ServerOptimizeURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-    Invoke-RestMethod -Uri $ServerOptimizeURI -Headers $HeaderDictionary -Body $OptimizeServerXMLBody -ContentType application/xml -Method Post
-
-    Write-Host "Your Cloud Server will be resized based on your input. Run Get-CloudServers to check on the status of the build and be sure to confirm the resized server after rebuild."
-
+    $Body = '{
+    "resize" : {
+        "flavorRef" : "'+$CloudServerFlavorID+'"
     }
+}'
+
+    $Out = "Your server will now be resized.  Please note, resize requests are only valid against standard flavors, and not compute/memory/IO optimized flavors."
+    }
+
+if ($RegionList -contains $Region) {    
+
+      Add-APIRequest $URI $Body
+
+      Write-Host $Out
+
 }
 
 else {
@@ -1215,14 +1414,15 @@ function Remove-CloudServer {
         [string]$Region
         )
 
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversURI/$CloudServerID"
+
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
     
-    ## Setting variables needed to execute this function
-    Set-Variable -Name ServerDeleteURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID"
-    
-    Invoke-RestMethod -Uri $ServerDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    Remove-APIRequest $URI -ErrorAction Stop
 
     Write-Host "Your server has been scheduled for deletion. This action will take up to a minute to complete."
 
@@ -1267,15 +1467,15 @@ function Remove-CloudServerImage {
         [string]$Region
         )
 
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$imagesURI/$CloudServerID"
 
 if ($RegionList -contains $Region) {
     
     Get-AuthToken
-    
-    ## Setting variables needed to execute this function
-    Set-Variable -Name DFWImageDeleteURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/images/$CloudServerImageID"
 
-    Invoke-RestMethod -Uri $DFWImageDeleteURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+    Remove-APIRequest $URI -ErrorAction Stop
 
     Write-Host "Your Rackspace Cloud Server Image has been deleted."
 
@@ -1316,29 +1516,52 @@ function Set-CloudServerRescueMode {
     Param(
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudServerID,
-        [Parameter(Position=1,Mandatory=$true)]
+        [Parameter(Position=1,Mandatory=$false)]
+        [string]$RescueImageID,
+        [Parameter(Position=2,Mandatory=$true)]
         [string]$Region
         )
+
+    ## Setting variables needed to execute this function
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
+    
+if ($RescueImageID) {    
     
     ## Setting variables needed to execute this function
-    [xml]$RescueModeXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-    <rescue xmlns="http://docs.openstack.org/compute/ext/rescue/api/v1.1" />'
+    $Body = '{
+    "rescue" :
+        {
+            "rescue_image_ref": "'+$RescueImageID+'"
+        }
+}'
 
+}
+
+else {
+
+        ## Setting variables needed to execute this function
+    $Body = '{
+    "rescue" :
+        {
+            "rescue_image_ref": "none"
+        }
+}'
+
+}
 
 if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    ## Setting variables needed to execute this function
-    Set-Variable -Name RescueModeURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
+    Add-APIRequest $URI $Body | Out-Null
 
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-    $RescueModePass = $RescueMode.adminPass
+    $RescuePass = $Response.adminPass
 
     Write-Host "Rescue Mode takes 5 - 10 minutes to enable. Please do not interact with this server again until it's status is RESCUE.
     Your temporary password in rescue mode is:
 
-    $RescueModePass
+    $RescuePass
     "
 
 }
@@ -1357,10 +1580,14 @@ function Remove-CloudServerRescueMode {
         [string]$CloudServerID,
         [string]$Region
         )
-    
+
     ## Setting variables needed to execute this function
-    [xml]$RescueModeXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<unrescue xmlns="http://docs.rackspacecloud.com/servers/api/v1.1" />'
+    $Body = '{
+"unrescue" : null
+}'
+    
+    Get-URI cloudServers $Region
+    $URI = "$URL$serversActionURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {
@@ -1368,10 +1595,7 @@ if ($RegionList -contains $Region) {
     ## Retrieving authentication token
     Get-AuthToken
 
-    ## Setting variables needed to execute this function
-    Set-Variable -Name RescueModeURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/action"
-
-    $RescueMode = Invoke-RestMethod -Uri $RescueModeURI -Headers $HeaderDictionary -Body $RescueModeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+    Add-APIRequest $URI $Body
 
     Write-Host "Your server is being restored to normal service.  Please wait for the status of the server to show ACTIVE before carrying out any further commands against it."
 
@@ -1397,7 +1621,8 @@ function Get-CloudBlockStorageTypes {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v2/$CloudDDI/types.xml"
+    Get-URI cloudBlockStorage $Region
+    $URI = "$URL$blockstoragevolumetypesURI"
 
     if ($RegionList -contains $Region) {    
     
@@ -1405,11 +1630,10 @@ function Get-CloudBlockStorageTypes {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolTypeStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolTypeFinal = ($VolTypeStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolTypeFinal.volume_types.volume_type | ft $VolTypeTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.volume_types | ft $VolTypeTable -AutoSize
     }
 
     else {
@@ -1456,7 +1680,8 @@ function Get-CloudBlockStorageVolList {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes.xml"
+    Get-URI cloudBlockStorage $Region
+    $URI = "$URL$blockstoragevolumesURI"
 
     if ($RegionList -contains $Region) {    
     
@@ -1464,11 +1689,10 @@ function Get-CloudBlockStorageVolList {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolListStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolListFinal = ($VolListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolListFinal.volumes.volume | ft $VolListTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.volumes | ft $VolListTable -AutoSize
     }
 
     else {
@@ -1517,7 +1741,7 @@ function Get-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1525,11 +1749,10 @@ function Get-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolListStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolListFinal = ($VolListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolListFinal.volume | ft $VolTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.volume | ft $VolTable -AutoSize
     }
 
     else {
@@ -1577,18 +1800,18 @@ function Add-CloudBlockStorageVol {
         [string] $CloudBlockStorageVolName,
         [Parameter (Position=2, Mandatory=$false)]
         [string] $CloudBlockStorageVolDesc,
-        [Parameter (Position=2, Mandatory=$true)]
-        [int] $CloudBlockStorageVolSize,
-        [Parameter (Position=2, Mandatory=$true)]
-        [string] $CloudBlockStorageVolType,
         [Parameter (Position=3, Mandatory=$true)]
+        [int] $CloudBlockStorageVolSize,
+        [Parameter (Position=4, Mandatory=$true)]
+        [string] $CloudBlockStorageVolType,
+        [Parameter (Position=5, Mandatory=$true)]
         [string] $Region
     )
 
     ## Force switch variable setting
-    if ($CloudBlockStorageVolSize -lt 100) {
-        Write-Host "You must enter a volume size of greater than 100GB." -ForegroundColor Red
-        break
+    if ($CloudBlockStorageVolSize -lt 50) {
+        Write-Host "You must enter a volume size of greater than 75 GB for SATA volumes and 50 GB for SSD volumes." -ForegroundColor Red
+        Break
     }
 
     elseif ($CloudBlockStorageVolSize -gt 1024) {
@@ -1597,17 +1820,17 @@ function Add-CloudBlockStorageVol {
     }
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes"
 
-    ## Create XML request
-    [xml]$NewVolXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<volume xmlns="http://docs.rackspace.com/volume/api/v1"
-        display_name="'+$CloudBlockStorageVolName+'"
-        display_description="'+$CloudBlockStorageVolDesc+'"
-        size="'+$CloudBlockStorageVolSize+'"
-        volume_type="'+$CloudBlockStorageVolType+'">
- 
-</volume>'
+    ## Create JSON request
+    $Body = '{
+    "volume": {
+        "display_name": "'+$CloudBlockStorageVolName+'",
+        "display_description": "'+$CloudBlockStorageVolDesc+'",
+        "size": '+$CloudBlockStorageVolSize+',
+        "volume_type": "'+$CloudBlockStorageVolType+'"
+     }
+}'
 
     if ($RegionList -contains $Region) {
     
@@ -1615,10 +1838,9 @@ function Add-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Body $NewVolXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
-    [xml]$VolFinal = ($VolStep0.innerxml)
+    Add-APIRequest $URI $Body
 
-        $VolFinal.volume | ft $VolTable -AutoSize
+    $Response.volume | ft $VolTable -AutoSize
     }
 
     else {
@@ -1668,7 +1890,7 @@ function Remove-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/volumes/$CloudBlockStorageVolID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1676,8 +1898,7 @@ function Remove-CloudBlockStorageVol {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
-    [xml]$VolFinal = ($VolStep0.innerxml)
+    Remove-APIRequest $URI
 
         Write-Host "The volume has been deleted."
     }
@@ -1722,7 +1943,7 @@ function Get-CloudBlockStorageSnapList {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots"
 
         if ($RegionList -contains $Region) {    
     
@@ -1730,11 +1951,17 @@ function Get-CloudBlockStorageSnapList {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolSnapFinal.snapshots.snapshot | ft $VolSnapTable -AutoSize
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
+    $Response.snapshots | ft $VolSnapTable -AutoSize
+
+    if ($Response.snapshots.Count -eq 0) {
+        Write-Host "You do not currently have any Block Storage Volume snapshots."
+        }
+
+    else {}
+
     }
 
     else {
@@ -1776,7 +2003,7 @@ function Get-CloudBlockStorageSnap {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1784,11 +2011,10 @@ function Get-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
+    $Response.snapshot | ft $VolSnapTable -AutoSize
     }
 
     else {
@@ -1854,16 +2080,17 @@ function Add-CloudBlockStorageSnap {
     }
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots"
 
-    ## Create XML request
-    [xml]$NewSnapXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<snapshot xmlns="http://docs.rackspace.com/volume/api/v1"
-          name="'+$CloudBlockStorageSnapName+'"
-          display_name="'+$CloudBlockStorageSnapName+'"
-          display_description="'+$CloudBlockStorageSnapDesc+'"
-          volume_id="'+$CloudBlockStorageVolID+'"
-          force="'+$ForceOut+'" />'
+    ## Create JSON request
+    $Body = '{
+    "snapshot": {
+        "display_name": "'+$CloudBlockStorageSnapName+'",
+        "display_description": "'+$CloudBlockStorageSnapDesc+'",
+        "volume_id": "'+$CloudBlockStorageVolID+'",
+        "force": '+$ForceOut+'
+     }
+}'
 
     if ($RegionList -contains $Region) {
     
@@ -1871,10 +2098,10 @@ function Add-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Body $NewSnapXMLBody -ContentType application/xml -Method Post -ErrorAction Stop)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Add-APIRequest $URI $Body
 
-        $VolSnapFinal.snapshot | ft $VolSnapTable -AutoSize
+    $Response.snapshot | ft $VolSnapTable -AutoSize
+
     }
 
     else {
@@ -1924,7 +2151,7 @@ function Remove-CloudBlockStorageSnap {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name CBSURI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID.xml"
+    Set-Variable -Name URI -Value "https://$Region.blockstorage.api.rackspacecloud.com/v1/$CloudDDI/snapshots/$CloudBlockStorageSnapID"
 
     if ($RegionList -contains $Region) {    
     
@@ -1932,10 +2159,10 @@ function Remove-CloudBlockStorageSnap {
     Get-AuthToken
 
     ## Making the call to the API for a list of available volumes and storing data into a variable
-    [xml]$VolSnapStep0 = (Invoke-RestMethod -Uri $CBSURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop)
-    [xml]$VolSnapFinal = ($VolSnapStep0.innerxml)
+    Remove-APIRequest $URI
 
-        Write-Host "The snapshot has been deleted."
+    Write-Host "The snapshot has been deleted."
+    
     }
 
     else {
@@ -1982,17 +2209,18 @@ function Connect-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name ServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments.xml"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments"
 
-    [xml]$AttachStorage = '<?xml version="1.0" encoding="UTF-8"?>
-<volumeAttachment
-    xmlns="http://docs.openstack.org/compute/api/v1.1"
-    volumeId="'+$CloudBlockStorageVolID+'"
-    device="/dev/xvdb"/>'
+    $Body = '{
+   "volumeAttachment":{
+      "device":null,
+      "volumeId":"'+$CloudBlockStorageVolID+'"
+   }
+}'
 
  if ($RegionList -contains $Region) {
         
-        Invoke-RestMethod -Uri $ServerURI -Headers $HeaderDictionary -Body $AttachStorage -ContentType application/xml -Method Post -ErrorAction Stop | Out-Null
+        Add-APIRequest $URI $Body | Out-Null
 
         Write-Host "The cloud block storage volume has been attached.  Please wait 10 seconds for confirmation:"
 
@@ -2036,11 +2264,11 @@ function Disconnect-CloudBlockStorageVol {
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name ServerURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments/$CloudServerAttachmentID.xml"
+    Set-Variable -Name URI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/servers/$CloudServerID/os-volume_attachments/$CloudServerAttachmentID"
 
  if ($RegionList -contains $Region) {
         
-        Invoke-RestMethod -Uri $ServerURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI -ErrorAction Stop
 
         Write-Host "The cloud block storage volume has been detached.  Please wait 15 seconds for confirmation:"
 
@@ -2077,12 +2305,13 @@ else {
 function Get-CloudNetworks{
 
     Param(
-        [Parameter (Position=0, Mandatory=$false)]
+        [Parameter (Position=0, Mandatory=$true)]
         [string] $Region
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name NetworksURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+    Get-URI cloudNetworks $Region
+    $URI = "$URL$networksURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -2091,11 +2320,10 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available networks and storing data into a variable
-    [xml]$NetworkListStep0 = (Invoke-RestMethod -Uri $NetworksURI  -Headers $HeaderDictionary)
-    [xml]$NetworkListFinal = ($NetworkListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $NetworkListFinal.networks.network | Sort-Object label | ft $NetworkListTable -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.networks | Sort-Object label | ft $NetworkListTable -AutoSize
 
 }
 
@@ -2123,10 +2351,10 @@ else {
 
  PS C:\Users\mitch.robins> Get-CloudNetworks ORD
  
- Network Name           Assigned Block   Network ID                          
-------------           --------------   ----------                          
-MitchPSTest            192.168.0.0/16   03debf75-1234-4c90-8015-5de15ffbb93b
-Nicks-192.168.100.0/24 192.168.100.0/24 3901a409-1234-4457-bf69-d0db01ea40f4
+Network Name Network ID                          
+------------ ----------                          
+pstest       191d3959-331e-4e29-a5f7-a8c0619123df
+pstest1      dfc46217-942a-4609-98b4-ed916df8547f
 
 .LINK
 http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
@@ -2134,36 +2362,97 @@ http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
 #>
 }
 
+<# function Get-CloudNetworksSubnets{
+
+    Param(
+        [Parameter (Position=0, Mandatory=$true)]
+        [string] $Region
+    )
+
+    ## Setting variables needed to execute this function
+    Get-URI cloudNetworks $Region
+    $URI = "$URL$subnetsURI"
+
+## Using conditional logic to route requests to the relevant API per data center
+if ($RegionList -contains $Region) {    
+    
+    ## Retrieving authentication token
+    Get-AuthToken
+
+    ## Making the call to the API for a list of available networks and storing data into a variable
+    Get-APIRequest $URI
+
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.networks | Sort-Object label | ft $NetworkListTable -AutoSize
+
+}
+
+else {
+
+    Send-RegionError
+    }
+<#
+ .SYNOPSIS
+ The Get-CloudNetworks cmdlet will pull down a list of all Rackspace Cloud Networks on your account.
+
+ .DESCRIPTION
+ See the synopsis field.
+
+ .PARAMETER Region
+ Use this parameter to indicate the region in which you would like to execute this request.
+
+ .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudNetworks -Region DFW
+ This example shows how to get a list of all networks currently deployed in your account within the DFW region.
+
+  .EXAMPLE
+ PS C:\Users\Administrator> Get-CloudNetworks ORD
+ This example shows how to get a list of all networks deployed in your account within the ORD region, but without specifying the parameter name itself.  Both examples work interchangably.
+
+ PS C:\Users\mitch.robins> Get-CloudNetworks ORD
+ 
+Network Name Network ID                          
+------------ ----------                          
+pstest       191d3959-331e-4e29-a5f7-a8c0619123df
+pstest1      dfc46217-942a-4609-98b4-ed916df8547f
+
+.LINK
+http://docs.rackspace.com/servers/api/v2/cn-devguide/content/list_networks.html
+
+
+}#>
+
 function Add-CloudNetwork {
     
     Param(
         [Parameter(Position=0,Mandatory=$true)]
         [string]$CloudNetworkLabel,
         [Parameter(Position=1,Mandatory=$true)]
-        [string]$CloudNetworkCIDR,
-        [Parameter(Position=2,Mandatory=$true)]
         [string]$Region
         )
 
-        ## Setting variables needed to execute this function
-        Set-Variable -Name NewNetURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2.xml"
+    ## Setting variables needed to execute this function
+    Get-URI cloudNetworks $Region
+    $URI = "$URL$networksURI"
 
-        Get-AuthToken
-
-[xml]$NewCloudNetXMLBody = '<?xml version="1.0" encoding="UTF-8"?>
-<network
-  cidr="'+$CloudNetworkCIDR+'"
-  label="'+$CloudNetworkLabel+'"
-/>'
+    $Body = '{
+    "network": 
+    {
+        "name": "'+$CloudNetworkLabel+'",
+        "shared": false,
+        "tenant_id": "'+$CloudDDI+'"
+    }
+}'
  
  if ($RegionList -contains $Region) {
         
-        $NewCloudNet = Invoke-RestMethod -Uri $NewNetURI -Headers $HeaderDictionary -Body $NewCloudNetXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-        [xml]$NewCloudNetInfo = $NewCloudNet.innerxml
+        Get-AuthToken
+        
+        Add-APIRequest $URI $Body -ErrorAction Stop
 
         Write-Host "You have just created the following cloud network:"
 
-        $NewCloudNetInfo.network
+        $Response.network
 
         }
 
@@ -2211,13 +2500,14 @@ function Remove-CloudNetwork {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name DelNetURI -Value "https://$Region.servers.api.rackspacecloud.com/v2/$CloudDDI/os-networksv2/$CloudNetworkID.xml"
-
-        Get-AuthToken
+        Get-URI cloudNetworks $Region
+        $URI = "$URL$networksURI/$CloudNetworkID"
 
  if ($RegionList -contains $Region) {
+
+        Get-AuthToken
         
-        $DelCloudNet = Invoke-RestMethod -Uri $DelNetURI -Headers $HeaderDictionary -Method DELETE
+        Remove-APIRequest $URI
 
         Write-Host "The cloud network has been deleted."
 
@@ -2261,12 +2551,13 @@ else {
 function Get-CloudLoadBalancers{
 
     Param(
-        [Parameter (Position=0, Mandatory=$false)]
+        [Parameter (Position=0, Mandatory=$true)]
         [string] $Region
     )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -2275,11 +2566,10 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available load balancers and storing data into a variable
-    [xml]$LBListStep0 = (Invoke-RestMethod -Uri $LBURI  -Headers $HeaderDictionary)
-    [xml]$LBListFinal = ($LBListStep0.innerxml)
+    Get-APIRequest $URI
 
     ## Handling empty response bodies indicating that no load balancers exist in the queried data center
-    if ($LBListFinal.loadBalancers.loadBalancer -eq $null) {
+    if ($Response.loadBalancers.Count -eq 0) {
 
         Write-Host "You do not currently have any Cloud Load Balancers provisioned in the $Region region."
 
@@ -2289,7 +2579,7 @@ if ($RegionList -contains $Region) {
     else {
         
         ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $LBListFinal.loadBalancers.loadBalancer | Sort-Object Name | ft $LBListTable -AutoSize
+        $Response.loadBalancers | Sort-Object Name | ft $LBListTable -AutoSize
 
     }
 
@@ -2340,29 +2630,27 @@ function Get-CloudLoadBalancerDetails {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name LBDetailURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
-        Set-Variable -Name LBCachingURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
-
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersDetailURI"
+        $URI2 = "$URL$loadbalancersCachingURI"
 
     if ($RegionList -contains $Region) {
 
     Get-AuthToken
 
-    [xml]$LBDetailStep0 = (Invoke-RestMethod -Uri $LBDetailURI  -Headers $HeaderDictionary -Method Get)
-    [xml]$LBDetailFinal = ($LBDetailStep0.innerxml)
+    Get-APIRequest $URI
 
-    [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $LBCachingURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
-    [xml]$ContentCachingFinal = ($ContentCachingStep0.innerxml)
+    $ContentCachingDetails = Invoke-RestMethod -Uri $URI2 -Headers $HeaderDictionary -Method Get -ErrorAction Stop
 
     ## Handling empty response bodies indicating that no servers exist in the queried data center
-    if ($LBDetailFinal.loadBalancer -eq $null) {
+    if ($Response.loadBalancer -eq $null) {
 
         Write-Host "You have entered an incorrect Cloud Load Balancer ID."
 
     }
 
-            $lbip0 = $LBDetailFinal.loadBalancer.virtualIps.virtualIp
-            $nodeip0 = $LBDetailFinal.loadBalancer.nodes.node
+            $lbip0 = $Response.loadBalancer.virtualIps
+            $nodeip0 = $Response.loadBalancer.nodes
         
             $lbipfinal = ForEach ($ip in $lbip0)
 	                    {
@@ -2376,7 +2664,7 @@ function Get-CloudLoadBalancerDetails {
             IP = $ip.address
 	    }}
 
-        $LBDetailOut = @{"CLB Content Caching"=($ContentCachingFinal.contentCaching.enabled);"CLB Name"=($LBDetailFinal.loadbalancer.name);"CLB ID"=($LBDetailFinal.loadbalancer.id);"CLB Algorithm"=($LBDetailFinal.loadbalancer.algorithm);"CLB Timeout"=($LBDetailFinal.loadbalancer.timeout);"CLB Protocol"=($LBDetailFinal.loadbalancer.protocol);"CLB Port"=($LBDetailFinal.loadbalancer.port);"CLB Status"=($LBDetailFinal.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($LBDetailFinal.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($LBDetailFinal.loadbalancer.created.time);"CLB Updated"=($LBDetailFinal.loadbalancer.updated.time);"- CLB Node IDs"=($LBDetailFinal.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($LBDetailFinal.loadbalancer.nodes.node.port);"- CLB Node Condition"=($LBDetailFinal.loadbalancer.nodes.node.condition);"- CLB Node Status"=($LBDetailFinal.loadbalancer.nodes.node.status);"CLB Logging"=($LBDetailFinal.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($LBDetailFinal.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($LBDetailFinal.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($LBDetailFinal.loadbalancer.connectionthrottle.rateinterval)}
+        $LBDetailOut = @{"CLB Content Caching"=($ContentCachingFinal.contentCaching.enabled);"CLB Name"=($Response.loadbalancer.name);"CLB ID"=($Response.loadbalancer.id);"CLB Algorithm"=($Response.loadbalancer.algorithm);"CLB Timeout"=($Response.loadbalancer.timeout);"CLB Protocol"=($Response.loadbalancer.protocol);"CLB Port"=($Response.loadbalancer.port);"CLB Status"=($Response.loadbalancer.status);"CLB IP(s)"=($Response.ip);"CLB Session Persistence"=($Response.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($Response.loadbalancer.created.time);"CLB Updated"=($Response.loadbalancer.updated.time);"- CLB Node Count"=($Response.loadBalancer.nodes.Count);"- CLB Node IDs"=($Response.loadbalancer.nodes.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($Response.loadbalancer.nodes.port);"- CLB Node Condition"=($Response.loadbalancer.nodes.condition);"- CLB Node Status"=($Response.loadbalancer.nodes.status);"CLB Logging"=($Response.loadbalancer.connectionlogging.enabled);"CLB Connections (Min)"=($Response.loadbalancer.connectionthrottle.minconnections);"CLB Connections (Max)"=($Response.loadbalancer.connectionthrottle.maxconnections);"CLB Connection Rate (Max)"=($Response.loadbalancer.connectionthrottle.maxconnectionrate);"CLB Connection Rate Interval"=($Response.loadbalancer.connectionthrottle.rateinterval)}
 
         $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
@@ -2417,17 +2705,17 @@ See synopsis.
 function Get-CloudLoadBalancerProtocols{
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name PROTOCOLURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/protocols.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersProtocolURI"
 
     ## Retrieving authentication token
     Get-AuthToken
 
     ## Making the call to the API for a list of available load balancers and storing data into a variable
-    [xml]$LBProtocolListStep0 = (Invoke-RestMethod -Uri $PROTOCOLURI  -Headers $HeaderDictionary)
-    [xml]$LBProtocolListFinal = ($LBProtocolListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $LBProtocolListFinal.Protocols.protocol | Sort-Object Name | ft -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.Protocols | Sort-Object Name | ft -AutoSize
 
 <#
  .SYNOPSIS
@@ -2449,17 +2737,17 @@ function Get-CloudLoadBalancerProtocols{
 function Get-CloudLoadBalancerAlgorithms{
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name ALGORITHMURI -Value "https://dfw.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/algorithms.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersAlgorithmURI"
 
     ## Retrieving authentication token
     Get-AuthToken
 
     ## Making the call to the API for a list of available load balancers and storing data into a variable
-    [xml]$LBAlgorithmListStep0 = (Invoke-RestMethod -Uri $ALGORITHMURI  -Headers $HeaderDictionary)
-    [xml]$LBAlgorithmListFinal = ($LBAlgorithmListStep0.innerxml)
+    Get-APIRequest $URI
 
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
-        $LBAlgorithmListFinal.algorithms.algorithm | Sort-Object Name | ft -AutoSize
+    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    $Response.algorithms | Sort-Object Name | ft -AutoSize
 
 <#
  .SYNOPSIS
@@ -2500,32 +2788,41 @@ function Add-CloudLoadBalancer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NewLBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersURI"
 
-[xml]$NewCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-	name="'+$CloudLBName+'" 
-	port="'+$CloudLBPort+'"
-	protocol="'+$CloudLBProtocol.ToUpper()+'"
-    algorithm="'+$CloudLBAlgorithm.ToUpper()+'">
-	<virtualIps>
-		<virtualIp type="PUBLIC"/>
-	</virtualIps>
-	<nodes>
-		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition.ToUpper()+'"/>
-	</nodes>
-</loadBalancer>'
+        $Body = '{
+        "loadBalancer": {
+            "name": "'+$CloudLBName+'",
+            "port": '+$CloudLBPort+',
+            "protocol": "'+$CloudLBProtocol.ToUpper()+'",
+            "algorithm": "'+$CloudLBAlgorithm.ToUpper()+'",
+            "virtualIps": [
+                {
+                    "type": "PUBLIC"
+                }
+            ],
+            "nodes": [
+                {
+                    "address": "'+$CloudLBNodeIP+'",
+                    "port": '+$CloudLBNodePort+',
+                    "condition": "'+$CloudLBNodeCondition.ToUpper()+'"
+                }
+            ]
+        }
+    }'
+
  
  if ($RegionList -contains $Region) {
 
-                Get-AuthToken
+        Get-AuthToken
         
-        $NewCloudLB = Invoke-RestMethod -Uri $NewLBURI -Headers $HeaderDictionary -Body $NewCloudLBXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-        [xml]$NewCloudLBInfo = $NewCloudLB.innerxml
+        Add-APIRequest $URI $Body
 
         Write-Host "The following is the information for your new CLB. A refreshed CLB list will appear in 10 seconds."
 
-        $lbip0 = $NewCloudLB.loadBalancer.virtualIps.virtualIp
-        $nodeip0 = $NewCloudLB.loadBalancer.nodes.node
+        $lbip0 = $Response.loadBalancer.virtualIps
+        $nodeip0 = $Response.loadBalancer.nodes
         
         $lbipfinal = ForEach ($ip in $lbip0)
 	    {
@@ -2539,7 +2836,7 @@ function Add-CloudLoadBalancer {
             IP = $ip.address
 	    }}
 
-        $LBDetailOut = @{"CLB Name"=($NewCloudLB.loadbalancer.name);"CLB ID"=($NewCloudLB.loadbalancer.id);"CLB Algorithm"=($NewCloudLB.loadbalancer.algorithm);"CLB Protocol"=($NewCloudLB.loadbalancer.protocol);"CLB Port"=($NewCloudLB.loadbalancer.port);"CLB Status"=($NewCloudLB.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($NewCloudLB.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($NewCloudLB.loadbalancer.created.time);"CLB Updated"=($NewCloudLB.loadbalancer.updated.time);"- CLB Node ID(s)"=($NewCloudLB.loadbalancer.nodes.node.id);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($NewCloudLB.loadbalancer.nodes.node.port);"- CLB Node Condition"=($NewCloudLB.loadbalancer.nodes.node.condition);"- CLB Node Status"=($NewCloudLB.loadbalancer.nodes.node.status)}
+        $LBDetailOut = @{"CLB Name"=($Response.loadbalancer.name);"CLB ID"=($Response.loadbalancer.id);"CLB Algorithm"=($Response.loadbalancer.algorithm);"CLB Protocol"=($Response.loadbalancer.protocol);"CLB Port"=($Response.loadbalancer.port);"CLB Status"=($Response.loadbalancer.status);"CLB IP(s)"=($LBIPFinal.ip);"CLB Session Persistence"=($Response.loadbalancer.sessionpersistence.persistenceType);"CLB Created"=($Response.loadbalancer.created.time);"CLB Updated"=($Response.loadbalancer.updated.time);"- CLB Node ID(s)"=($Response.loadbalancer.node.id);"- CLB Node Count"=($Response.loadBalancer.nodes.Count);"- CLB Node IP"=($NodeIPFinal.IP);"- CLB Node Port"=($Response.loadbalancer.nodes.port);"- CLB Node Condition"=($Response.loadbalancer.nodes.condition);"- CLB Node Status"=($Response.loadbalancer.nodes.status)}
 
         $LBDetailOut.GetEnumerator() | Sort-Object -Property Name -Descending
 
@@ -2606,7 +2903,8 @@ function Get-CloudLoadBalancerNodeList{
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersNodeURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -2615,11 +2913,10 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available load balancers and storing data into a variable
-    [xml]$NodeListStep0 = (Invoke-RestMethod -Uri $DFWLBURI  -Headers $HeaderDictionary)
-    [xml]$NodeListFinal = ($NodeListStep0.innerxml)
+    Get-APIRequest $URI
 
     ## Handling empty response bodies indicating that no load balancers exist in the queried data center
-    if ($NodeListFinal.nodes.node -eq $null) {
+    if ($Response.nodes -eq $null) {
 
         Write-Host "You do not currently have any nodes provisioned to this Cloud Load Balancer."
 
@@ -2628,9 +2925,9 @@ if ($RegionList -contains $Region) {
     ## See first "if" block for notes on each line##
     else {
         
-        ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+        ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
      
-        $NodeListFinal.nodes.node
+        $Response.nodes
 
     }
 
@@ -2687,30 +2984,45 @@ function Add-CloudLoadBalancerNode {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NewNodeURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersNodeURI"
 
         Get-AuthToken
 	
 		if (!$CloudLBNodeWeight) {
 		
-		[xml]$NewCloudLBNodeXMLBody = '<nodes xmlns="http://docs.openstack.org/loadbalancers/api/v1.0">
-		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition.ToUpper()+'" type="'+$CloudLBNodeType.ToUpper()+'"/>
-		</nodes>'}
+		$Body = '{"nodes": [
+        {
+            "address": "'+$CloudLBNodeIP+'",
+            "port": '+$CloudLBNodePort+',
+            "condition": "'+$CloudLBNodeCondition.ToUpper()+'",
+            "type":"'+$CloudLBNodeType.ToUpper()+'"
+        }
+    ]
+}'
+        }
 	 
 	 	elseif ($CloudLBNodeWeight) {
 	 	
-	 	[xml]$NewCloudLBNodeXMLBody = '<nodes xmlns="http://docs.openstack.org/loadbalancers/api/v1.0">
-		<node address="'+$CloudLBNodeIP+'" port="'+$CloudLBNodePort+'" condition="'+$CloudLBNodeCondition+'" type="'+$CloudLBNodeType+'" weight="'+$CloudLBNodeWeight+'"/>
-		</nodes>'}
+	 	$Body = '{"nodes": [
+        {
+            "address": "'+$CloudLBNodeIP+'",
+            "port": '+$CloudLBNodePort+',
+            "condition": "'+$CloudLBNodeCondition.ToUpper()+'",
+            "weight": '+$CloudLBNodeWeight+',
+            "type":"'+$CloudLBNodeType.ToUpper()+'"
+        }
+    ]
+}'
+        }
  
  if ($RegionList -contains $Region) {
         
-        $NewCloudLBNode = Invoke-RestMethod -Uri $NewNodeURI -Headers $HeaderDictionary -Body $NewCloudLBNodeXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
-        [xml]$NewCloudLBNodeInfo = $NewCloudLBNode.innerxml
+    Add-APIRequest $URI $Body
 	
     Write-Host "The node has been added as follows:"
 
-	$NewCloudLBNodeInfo.nodes.node
+	$Response.nodes
 	}
 
 else {
@@ -2769,15 +3081,16 @@ function Remove-CloudLoadBalancerNode {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NodeURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersNodeURI/$CloudLBNodeID"
 
      if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        $DelCloudLBNode = Invoke-RestMethod -Uri $NodeURI -Headers $HeaderDictionary -Method Delete
+        Remove-APIRequest $URI
 	
-    Write-Host "The node has been deleted."
+        Write-Host "The node has been deleted."
 	}
 
 else {
@@ -2820,13 +3133,14 @@ function Remove-CloudLoadBalancer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name NodeURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersDetailURI"
 
      if ($RegionList -contains $Region) {
 
         Get-AuthToken        
         
-        $DelCloudLBNode = Invoke-RestMethod -Uri $NodeURI -Headers $HeaderDictionary -Method Delete
+        Remove-APIRequest $URI
 	
         Write-Host "The load balancer has been deleted."
 	}
@@ -2888,38 +3202,49 @@ function Update-CloudLoadBalancer {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID.xml"
-
-        Get-AuthToken
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersDetailURI"
 
         if ($ChangeName) {
-            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-            name="'+$CloudLBName+'"/>'
+            $Body = '{"loadBalancer":{
+    "name": "'+$CloudLBName+'"
+    }
+}'
         }
 
         elseif ($ChangePort) {
-            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-            port="'+$CloudLBPort+'"/>'
+            $Body = '{"loadBalancer":{
+    "port": '+$CloudLBPort+'
+    }
+}'
         }
 
         elseif ($ChangeProtocol) {
-            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-            protocol="'+$CloudLBProtocol+'"/>'
+            $Body = '{"loadBalancer":{
+    "protocol": "'+$CloudLBProtocol.ToUpper()+'"
+    }
+}'
         }
 
         elseif ($ChangeAlgorithm) {
-            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-            algorithm="'+$CloudLBAlgorithm+'"/>'
+            $Body = '{"loadBalancer":{
+    "algorithm": "'+$CloudLBAlgorithm.ToUpper()+'"
+    }
+}'
         }
 
         elseif ($ChangeTimeout) {
-            [xml]$UpdateCloudLBXMLBody = '<loadBalancer xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-            timeout="'+$CloudLBTimeout+'"/>'
+            $Body = '{"loadBalancer":{
+    "timeout": '+$CloudLBTimeout+'
+    }
+}'
         }
 
  if ($RegionList -contains $Region) {
+
+        Get-AuthToken
         
-        $UpdateCloudLB = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
         Write-Host "Your load balancer has been updated. Updated information will be shown in 10 seconds:"
 
@@ -3005,25 +3330,35 @@ function Update-CloudLoadBalancerNode {
         )
 
         ## Setting variables needed to execute this function
-        Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/$CloudLBNodeID.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersNodeDetailURI"
 
         if ($ChangeCondition) {
-            [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" condition="'+$CloudLBNodeCondition.ToUpper()+'"/>'
+            $Body = '{"node":{
+        "condition": "'+$CloudLBNodeCondition.ToUpper()+'"
+    }
+}'
         }
 
         elseif ($ChangeType) {
-            [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" type="'+$CloudLBNodeType.ToUpper()+'" />'
+            $Body = '{"node":{
+        "type": "'+$CloudLBNodeType+'",
+    }
+}'
         }
 
         elseif ($ChangeWeight) {
-            [xml]$UpdateCloudLBXMLBody = '<node xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" weight="'+$CloudLBNodeWeight+'"/>'
+            $Body = '{"node":{
+        "weight": '+$CloudLBNodeWeight+'
+    }
+}'
         }
 
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $UpdateCloudLBXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
         Write-Host "Your node has been updated. Updated information will be shown in 10 seconds:"
 
@@ -3106,7 +3441,8 @@ function Get-CloudLoadBalancerNodeEvents{
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/nodes/events.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersNodeEventsURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -3115,13 +3451,21 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API for a list of available load balancers and storing data into a variable
-    [xml]$NodeEventStep0 = Invoke-RestMethod -Uri $LBURI  -Headers $HeaderDictionary
-    [xml]$NodeEventFinal = ($NodeEventStep0.innerxml)
+    Get-APIRequest $URI
 
-    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
+
+    if ($Response.NodeServiceEvents.Count -eq 0) {
+
+    Write-Host "There are no events posted for this node."
+
+    }
+
+    else {
      
-        $NodeEventFinal.NodeServiceEvents.NodeServiceEvent | ft $NodeServiceEventTable -AutoSize
+    $Response.NodeServiceEvents | ft $NodeServiceEventTable -AutoSize
 
+    }
 }
 
 else {
@@ -3173,26 +3517,25 @@ function Get-CloudLoadBalancerACLs {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
-
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersACLURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        [xml]$AccessListStep0 = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
-        [xml]$AccessListFinal = $AccessListStep0.InnerXml
+        Get-APIRequest $URI
 
-            if (!$AccessListFinal.accessList.networkItem) {
+        if (!$Response.accessList) {
 
-                Write-Host "This load balancer does not currently have any ACLs configured." -ForegroundColor Red
+                Write-Host "This load balancer does not currently have any ACLs configured."
 
             }
 
-            else {
+        else {
             
-                $AccessListFinal.accessList.networkItem | ft $ACLTable -AutoSize
+                $Response.accessList | ft $ACLTable -AutoSize
 
             }
 }
@@ -3239,9 +3582,17 @@ function Add-CloudLoadBalancerACLItem {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersACLURI"
 
-    [xml]$ACLXMLBody = '<accessList xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"><networkItem address="'+$IP+'" type="'+$Action.ToUpper()+'" /></accessList>'
+    $Body = '{
+    "accessList": [
+        {
+            "address": "'+$IP+'",
+            "type": "'+$Action.ToUpper()+'"
+        }
+    ]
+}'
 
 
  if ($RegionList -contains $Region) {
@@ -3249,7 +3600,7 @@ function Add-CloudLoadBalancerACLItem {
         ## Retrieving authentication token
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $ACLXMLBody -ContentType application/xml -Method Post -ErrorAction Stop
+        Add-APIRequest $URI $Body
 
         Write-Host "The ACL item has been added.  Please wait 10 seonds for confirmation:"
 
@@ -3309,15 +3660,15 @@ function Remove-CloudLoadBalancerACLItem {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist/$ACLItemID.xml"
-
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersACLDetailURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI
 
         Write-Host "The ACL item has been deleted. Please wait 10 seconds for confirmation:"
 
@@ -3368,15 +3719,15 @@ function Remove-CloudLoadBalancerACL {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/accesslist.xml"
-
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersACLURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI
 
         Write-Host "All ACL items have been deleted. Please wait 10 seconds for confirmation:"
 
@@ -3424,9 +3775,14 @@ function Add-SessionPersistence {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSessionURI"
 
-    [xml]$AddSessionPersistenceXMLBody = '<sessionPersistence xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" persistenceType="'+$PersistenceType.ToUpper()+'"/>'
+    $Body = '{
+   "sessionPersistence":{
+      "persistenceType":"'+$PersistenceType.ToUpper()+'"
+   }
+}'
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -3435,20 +3791,15 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API
-    [xml]$AddPersistenceStep0 = Invoke-RestMethod -Uri $LBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
-    [xml]$AddPersistencetFinal = ($AddPersistenceStep0.innerxml)
+    Update-APIRequest $URI $Body
 
-        if (!$AddPersistencetFinal) {
-            Break
-        }
-
-    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
      
-        Write-Host "Session Persistence has now been enabled.  Please wait 10 seconds for an updated attribute listing."
+    Write-Host "Session Persistence has now been enabled.  Please wait 10 seconds for an updated attribute listing."
 
-        Sleep 10
+    Sleep 10
 
-        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+    Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
 
 }
 
@@ -3498,9 +3849,14 @@ function Update-SessionPersistence {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSessionURI"
 
-    [xml]$AddSessionPersistenceXMLBody = '<sessionPersistence xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" persistenceType="'+$PersistenceType.ToUpper()+'"/>'
+    $Body = '{
+   "sessionPersistence":{
+      "persistenceType":"'+$PersistenceType.ToUpper()+'"
+   }
+}'
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -3509,20 +3865,15 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API
-    [xml]$AddPersistenceStep0 = Invoke-RestMethod -Uri $LBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $AddSessionPersistenceXMLBody -Method Put -ErrorAction Stop
-    [xml]$AddPersistencetFinal = ($AddPersistenceStep0.innerxml)
-
-        if (!$AddPersistencetFinal) {
-            Break
-        }
+    Update-APIRequest $URI $Body
 
     ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
      
-        Write-Host "Session Persistence has now been modified.  Please wait 10 seconds for an updated attribute listing."
+    Write-Host "Session Persistence has now been modified.  Please wait 10 seconds for an updated attribute listing."
 
-        Sleep 10
+    Sleep 10
 
-        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+    Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
 
 }
 
@@ -3570,7 +3921,8 @@ function Remove-SessionPersistence {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/sessionpersistence.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSessionURI"
 
 ## Using conditional logic to route requests to the relevant API per data center
 if ($RegionList -contains $Region) {    
@@ -3579,10 +3931,9 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API
-    [xml]$PersistenceStep0 = Invoke-RestMethod -Uri $LBURI  -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
-    [xml]$PersistencetFinal = ($PersistenceStep0.innerxml)
+    Remove-APIRequest $URI
 
-    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
      
         Write-Host "Session Persistence has now been disabled.  Please wait 10 seconds for an updated attribute listing."
 
@@ -3637,15 +3988,20 @@ function Add-ConnectionLogging {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersLogURI"
 
-    [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"/>'
+    $Body = '{
+   "connectionLogging":{
+      "enabled":true
+   }
+}'
 
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
         Write-Host "Connection logging has now been enabled. Please wait 10 seconds to see an updated detail listing:"
 
@@ -3692,15 +4048,20 @@ function Remove-ConnectionLogging {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionlogging.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersLogURI"
 
-    [xml]$AddConnectionLoggingXMLBody = '<connectionLogging xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"/>'
+    $Body = '{
+   "connectionLogging":{
+      "enabled":false
+   }
+}'
 
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
         Write-Host "Connection logging has now been disabled. Please wait 10 seconds to see an updated detail listing:"
 
@@ -3755,19 +4116,23 @@ function Add-ConnectionThrottling {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancerThrottleURI"
 
-    [xml]$AddConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-    minConnections="'+$MinConnections+'"
-    maxConnections="'+$MaxConnections+'"
-    maxConnectionRate="'+$MaxConnectionRate+'"
-    rateInterval="'+$RateInterval+'" />'
+    $Body = '{
+    "connectionThrottle":{
+        "maxConnections": '+$MaxConnections+',
+        "minConnections": '+$MinConnections+',
+        "maxConnectionRate": '+$MaxConnectionRate+',
+        "rateInterval": '+$RateInterval+'
+    }
+}'
 
  if ($RegionList -contains $Region) {
 
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $AddConnectionThrottleXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
         Write-Host "Connection throttling has now been enabled. Please wait 10 seconds to see an updated detail listing:"
 
@@ -3841,29 +4206,46 @@ function Update-ConnectionThrottling {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancerThrottleURI"
 
         if ($ChangeMaxConnectionRate) {
     
-            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" maxConnectionRate="'+$MaxConnectionRate+'"/>'
+            $Body = '{
+    "connectionThrottle":{
+        "maxConnectionRate": '+$MaxConnectionRate+'
+    }
+}'
 
         }
 
         elseif ($ChangeMaxConnections) {
 
-            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" maxConnections="'+$MaxConnections+'"/>'
+            $Body = '{
+    "connectionThrottle":{
+        "maxConnections": '+$MaxConnections+'
+    }
+}'
 
         }
 
         elseif ($ChangeMinConnections) {
 
-            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" minConnections="'+$MinConnections+'"/>'
+            $Body = '{
+    "connectionThrottle":{
+        "minConnections": '+$MinConnections+'
+    }
+}'
 
         }
 
         elseif ($ChangeRateInterval) {
             
-            [xml]$ChangeConnectionThrottleXMLBody = '<connectionThrottle xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" rateInterval="'+$RateInterval+'"/>'
+            $Body = '{
+    "connectionThrottle":{
+        "rateInterval": '+$RateInterval+'
+    }
+}'
 
         }
 
@@ -3874,20 +4256,15 @@ if ($RegionList -contains $Region) {
     Get-AuthToken
 
     ## Making the call to the API
-    [xml]$ThrottleStep0 = Invoke-RestMethod -Uri $LBURI  -Headers $HeaderDictionary -ContentType application/xml -Body $ChangeConnectionThrottleXMLBody -Method Put -ErrorAction Stop
-    [xml]$ThrottleFinal = ($ThrottleStep0.innerxml)
+    Update-APIRequest $URI $Body
 
-        if (!$ThrottleFinal) {
-            Break
-        }
-
-    ## Since the response body is XML, we can use dot notation to show the information needed without further parsing.
+    ## Since the response body is JSON, we can use dot notation to show the information needed without further parsing.
      
-        Write-Host "Connection Throttling values have now been modified.  Please wait 10 seconds for an updated attribute listing."
+    Write-Host "Connection Throttling values have now been modified.  Please wait 10 seconds for an updated attribute listing."
 
-        Sleep 10
+    Sleep 10
 
-        Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
+    Get-CloudLoadBalancerDetails -CloudLBID $CloudLBID -Region $Region
 
 }
 
@@ -3954,14 +4331,15 @@ function Remove-ConnectionThrottling {
 
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/connectionthrottle.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersThrottleURI"
 
  if ($RegionList -contains $Region) {
 
         ## Retrieving authentication token
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $DFWLBURI -Headers $HeaderDictionary -Body $AddConnectionLoggingXMLBody -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI
 
         Write-Host "Connection throttling has now been disabled. Please wait 10 seconds to see an updated detail listing:"
 
@@ -4007,36 +4385,37 @@ function Get-HealthMonitor {
         )
 
         ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersHealthURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
     Get-AuthToken
         
-        [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
+        Get-APIRequest $URI
 
-            if (!$HealthMonitorStep0.healthMonitor.delay) {
+            if ($Response.healthMonitor.type -ne "CONNECT" -and $Response.healthMonitor.type -ne "HTTP") {
 
                     Write-Host "This load balancer does not currently have any health monitors configured." -ForegroundColor Red
 
                 }
 
-                elseif ($HealthMonitorStep0.healthMonitor.type -eq "CONNECT") {
+                elseif ($Response.healthMonitor.type -eq "CONNECT") {
 
-                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorConnectTable -AutoSize
-
-                }
-
-                elseif ($HealthMonitorStep0.healthMonitor.type -eq "HTTP") {
-
-                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+                    $Response.healthMonitor | ft $HealthMonitorConnectTable -AutoSize
 
                 }
 
-                elseif ($HealthMonitorStep0.healthMonitor.type -eq "HTTPS") {
+                elseif ($Response.healthMonitor.type -eq "HTTP") {
 
-                    $HealthMonitorStep0.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+                    $Response.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
+
+                }
+
+                elseif ($Response.healthMonitor.type -eq "HTTPS") {
+
+                    $Response.healthMonitor | ft $HealthMonitorHTTPTable -AutoSize
 
                 }
 
@@ -4098,44 +4477,54 @@ function Add-HealthMonitor {
         [string]$Region
         )
 
-        ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+    ## Setting variables needed to execute this function
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersHealthURI"
 
         if ($WatchConnections) {
 
-            [xml]$HealthMonitorXMLBody = '<healthMonitor xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-    type="CONNECT"
-    delay="'+$MonitorDelay+'"
-    timeout="'+$MonitorTimeout+'"
-    attemptsBeforeDeactivation="'+$MonitorFailureAttempts+'" />'
+            $Body = '{
+    "healthMonitor":{
+        "type": "CONNECT",
+        "delay": '+$MonitorDelay+',
+        "timeout": '+$MonitorTimeout+',
+        "attemptsBeforeDeactivation": '+$MonitorFailureAttempts+'
+    }
+}'
 
         }
 
         elseif ($WatchHTTP) {
 
-             [xml]$HealthMonitorXMLBody = '<healthMonitor xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-    type="HTTP"
-    delay="'+$MonitorDelay+'"
-    timeout="'+$MonitorTimeout+'"
-    attemptsBeforeDeactivation="'+$MonitorFailureAttempts+'"
-    path="'+$MonitorHTTPPath+'"
-    statusRegex="'+$MonitorStatusRegex+'"
-    bodyRegex="'+$MonitorBodyRegex+'"
-    hostHeader="'+$MonitorHostHeader+'"/>'
+            $Body = '{
+    "healthMonitor":{
+        "type": "HTTP",
+        "delay": '+$MonitorDelay+',
+        "timeout": '+$MonitorTimeout+',
+        "attemptsBeforeDeactivation": '+$MonitorFailureAttempts+',
+        "path": "'+$MonitorHTTPPath+'",
+        "statusRegex": "'+$MonitorStatusRegex+'",
+        "bodyRegex": "'+$MonitorBodyRegex+'",
+        "hostHeader": "'+$MonitorHostHeader+'"
+    }
+}'
 
         }
 
         elseif ($WatchHTTPS) {
 
-             [xml]$HealthMonitorXMLBody = '<healthMonitor xmlns="http://docs.openstack.org/loadbalancers/api/v1.0"
-    type="HTTPS"
-    delay="'+$MonitorDelay+'"
-    timeout="'+$MonitorTimeout+'"
-    attemptsBeforeDeactivation="'+$MonitorFailureAttempts+'"
-    path="'+$MonitorHTTPPath+'"
-    statusRegex="'+$MonitorStatusRegex+'"
-    bodyRegex="'+$MonitorBodyRegex+'"
-    hostHeader="'+$MonitorHostHeader+'"/>'
+            $Body = '{
+    "healthMonitor":{
+        "type": "HTTPS",
+        "delay": '+$MonitorDelay+',
+        "timeout": '+$MonitorTimeout+',
+        "attemptsBeforeDeactivation": '+$MonitorFailureAttempts+',
+        "path": "'+$MonitorHTTPPath+'",
+        "statusRegex": "'+$MonitorStatusRegex+'",
+        "bodyRegex": "'+$MonitorBodyRegex+'",
+        "hostHeader": "'+$MonitorHostHeader+'"
+    }
+}'
 
         }
 
@@ -4144,13 +4533,13 @@ function Add-HealthMonitor {
     ## Retrieving authentication token
     Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $HealthMonitorXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+    Update-APIRequest $URI $Body
 
-        Write-Host "Health Monitoring has now been enabled. Please wait 10 seconds to see an updated detail listing:"
+    Write-Host "Health Monitoring has now been enabled. Please wait 10 seconds to see an updated detail listing:"
 
-        Sleep 10
+    Sleep 10
 
-        Get-CloudLoadBalancerDetails $CloudLBID $Region
+    Get-CloudLoadBalancerDetails $CloudLBID $Region
 }
 
 else {
@@ -4219,14 +4608,15 @@ function Remove-HealthMonitor {
         )
 
         ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/healthmonitor.xml"
+        Get-URI cloudLoadBalancers $Region
+        $URI = "$URL$loadbalancersHealthURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        [xml]$HealthMonitorStep0 = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI
 
          Write-Host "Health monitoring has been removed from this load balancer."
 }
@@ -4268,19 +4658,24 @@ function Add-ContentCaching {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersCachingURI"
 
-    ## Set XML body variable
-    [xml]$ContentCachingXMLBody = '<contentCaching xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"/>'
+    ## Set JSON body variable
+    $Body = '{
+   "contentCaching":{
+      "enabled":true
+   }
+}'
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
-         Write-Host "Content caching has been enabled on this load balancer."
+        Write-Host "Content caching has been enabled on this load balancer."
 }
 
 else {
@@ -4320,17 +4715,22 @@ function Remove-ContentCaching {
         )
 
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/contentcaching.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersCachingURI"
 
     ## Set XML body variable
-    [xml]$ContentCachingXMLBody = '<contentCaching xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"/>'
+    $Body = '{
+   "contentCaching":{
+      "enabled":true
+   }
+}'
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        [xml]$ContentCachingStep0 = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $ContentCachingXMLBody -ContentType application/xml -Method Put -ErrorAction Stop
+        Update-APIRequest $URI $Body
 
          Write-Host "Content caching has been removed from this load balancer."
 }
@@ -4373,17 +4773,23 @@ function Get-SSLTermination {
 
     
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSSLURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
-        [xml]$SSLTerminationStep0 = Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Get -ErrorAction Stop
-        [xml]$SSLTerminationFinal = $SSLTerminationStep0.InnerXml
+        Get-APIRequest $URI
 
-        $SSLTerminationFinal.sslTermination | ft $SSLTable -Wrap
+        if ($Response -eq "") {
+            Write-Host "This LB does not currently have SSL termination enabled"
+        }
+
+        else {
+        $Response.sslTermination | ft $SSLTable -Wrap
+        }
 }
 
 else {
@@ -4436,45 +4842,66 @@ function Add-SSLTermination {
 
     
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSSLURI"
 
     if (($enabled) -and ($SecureTrafficOnly)) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true" securePort="'+$SSLPort+'" secureTrafficOnly="true">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
+        $Body = '{
+    "sslTermination":{
+        "certificate":"'+$Certificate+'",
+        "enabled":true,
+        "secureTrafficOnly":true,
+        "privatekey":"'+$PrivateKey+'",
+        "intermediateCertificate":"'+$IntermediateCertificate+'",
+        "securePort":'+$SSLPort+'
+    }
+}'
        
     }
 
     elseif (($enabled) -and (!$SecureTrafficOnly)) {
-        
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true" securePort="'+$SSLPort+'" secureTrafficOnly="false">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
+
+        $Body = '{
+    "sslTermination":{
+        "certificate":"'+$Certificate+'",
+        "enabled":true,
+        "secureTrafficOnly":false,
+        "privatekey":"'+$PrivateKey+'",
+        "intermediateCertificate":"'+$IntermediateCertificate+'",
+        "securePort":'+$SSLPort+'
+    }
+}'
        
     }
 
     elseif ((!$enabled) -and ($SecureTrafficOnly)) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false" securePort="'+$SSLPort+'" secureTrafficOnly="true">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
+        $Body = '{
+    "sslTermination":{
+        "certificate":"'+$Certificate+'",
+        "enabled":false,
+        "secureTrafficOnly":true,
+        "privatekey":"'+$PrivateKey+'",
+        "intermediateCertificate":"'+$IntermediateCertificate+'",
+        "securePort":'+$SSLPort+'
+    }
+}'
        
     }
 
     elseif ((!$enabled) -and (!$SecureTrafficOnly)) {
-        
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false" securePort="'+$SSLPort+'" secureTrafficOnly="false">
-        <privatekey>'+$PrivateKey+'</privatekey>
-        <certificate>'+$Certificate+'</certificate>
-        <intermediateCertificate>'+$IntermediateCertificate+'</intermediateCertificate>
-        </sslTermination>'
+
+        $Body = '{
+    "sslTermination":{
+        "certificate":"'+$Certificate+'",
+        "enabled":false,
+        "secureTrafficOnly":false,
+        "privatekey":"'+$PrivateKey+'",
+        "intermediateCertificate":"'+$IntermediateCertificate+'",
+        "securePort":'+$SSLPort+'
+    }
+}'
        
     }
 
@@ -4484,9 +4911,9 @@ function Add-SSLTermination {
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+        Update-APIRequest $URI $Body | Out-Null
         
         Write-Host "SSL termination has been configured.  Please wait 10 seconds for confirmation:"
 
@@ -4563,35 +4990,56 @@ function Update-SSLTermination {
 
     
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSSLURI"
 
     if ($EnableSSLTermination) {
         
-            [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="true"></sslTermination>'
+            $Body = '{
+    "sslTermination":{
+        "enabled":true
+    }
+}'
        
     }
 
     elseif ($DisableSSLTermination) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" enabled="false"></sslTermination>'
+            $Body = '{
+    "sslTermination":{
+        "enabled":false
+    }
+}'
        
     }
 
     elseif ($EnableSecureTrafficOnly) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" secureTrafficOnly="true"></sslTermination>'
+            $Body = '{
+    "sslTermination":{
+        "secureTrafficOnly":true
+    }
+}'
        
     }
 
     elseif ($DisableSecureTrafficOnly) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" secureTrafficOnly="false"></sslTermination>'
+            $Body = '{
+    "sslTermination":{
+        "secureTrafficOnly":false
+    }
+}'
        
     }
 
     elseif ($UpdateSSLPort) {
         
-        [xml]$SSLTerminationXMLBody = '<sslTermination xmlns="http://docs.openstack.org/loadbalancers/api/v1.0" securePort="'+$SSLPort+'"></sslTermination>'
+            $Body = '{
+    "sslTermination":{
+        "securePort":'+$SSLPort+'
+    }
+}'
        
     }
 
@@ -4599,9 +5047,9 @@ function Update-SSLTermination {
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
-    Get-AuthToken
+        Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Body $SSLTerminationXMLBody -ContentType application/xml -Method Put -ErrorAction Stop | Out-Null
+        Update-APIRequest $URI $Body | Out-Null
         
         Write-Host "SSL termination configuration has been updated.  Please wait 10 seconds for confirmation:"
 
@@ -4666,14 +5114,15 @@ function Remove-SSLTermination {
 
     
     ## Setting variables needed to execute this function
-    Set-Variable -Name LBURI -Value "https://$Region.loadbalancers.api.rackspacecloud.com/v1.0/$CloudDDI/loadbalancers/$CloudLBID/ssltermination.xml"
+    Get-URI cloudLoadBalancers $Region
+    $URI = "$URL$loadbalancersSSLURI"
 
  if ($RegionList -contains $Region) {
         
         ## Retrieving authentication token
         Get-AuthToken
         
-        Invoke-RestMethod -Uri $LBURI -Headers $HeaderDictionary -Method Delete -ErrorAction Stop
+        Remove-APIRequest $URI
         
         Write-Host "All SSL settings have been removed."
 }
