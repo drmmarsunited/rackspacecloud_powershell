@@ -28,6 +28,7 @@ $ImageListTable = @{Expression={$_.id};Label="Image ID";width=38},
 $ServerListTable = @{Expression={$_.id};Label="Server ID";width=38}, 
 @{Expression={$_.Name};Label="Server Name";width=40}, 
 @{Expression={$_.Status};Label="Server Status";width=15}, 
+@{Expression={$_.addresses.public.addr};Label="Server IP Addresses";width=200}
 
 $NetworkListTable = @{Expression={$_.name};Label="Network Name";width=25},  
 @{Expression={$_.id};Label="Network ID";width=33}
