@@ -268,7 +268,7 @@ function Update-APIRequest {
         )
 
     Try {
-        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -Body $Body -ContentType application/json -Method Put
+        $global:Response = Invoke-WebRequest -Uri $URI -Headers $HeaderDictionary -DisableKeepAlive -Body $Body -ContentType application/json -Method Put
         }
     Catch {
         Write-Host "There has been an API call error:" $Error[0]
@@ -281,7 +281,7 @@ function Remove-APIRequest {
         [string] $URI
         )
     Try {
-        $global:Response = Invoke-RestMethod -Uri $URI -Headers $HeaderDictionary -ContentType application/json -Method Delete
+        $global:Response = Invoke-WebRequest -Uri $URI -Headers $HeaderDictionary -DisableKeepAlive -ContentType application/json -Method Delete -ErrorAction Stop
         }
     Catch {
         Write-Host "There has been an API call error:" $Error[0]
@@ -1470,7 +1470,7 @@ function Remove-CloudServerImage {
 
     ## Setting variables needed to execute this function
     Get-URI cloudServers $Region
-    $URI = "$URL$imagesURI/$CloudServerID"
+    $URI = "$URL$imagesURI/$CloudServerImageID"
 
 if ($RegionList -contains $Region) {
     
