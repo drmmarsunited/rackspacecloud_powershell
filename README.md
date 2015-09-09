@@ -1,11 +1,13 @@
 <h1>PowerClient - Rackspace Cloud API Powershell Client</h1>
 
-<h2> CRITICAL UPDATE</h2>
+<h2> Latest Update(s)/h2>
 
 As of July 16th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
 
 * Dynamic endpoint URL retrieval from service catalog returned with auth token
 * Cloud Server password resets now have their own cmdlet: Update-CloudServerPassword
+
+I have also introduced a global variable called "$Result" that will give you the raw JSON output of the last API request that occurred by the client.
 
 <h2>Who am I and why should you use this client?</h2>
 
