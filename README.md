@@ -2,12 +2,18 @@
 
 <h2> Latest Update(s)</h2>
 
-As of July 16th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
+As of September 9th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
 
+* Cmdlets added for Rackspace Cloud Monitoring
 * Dynamic endpoint URL retrieval from service catalog returned with auth token
 * Cloud Server password resets now have their own cmdlet: Update-CloudServerPassword
 
 I have also introduced a global variable called "$Result" that will give you the raw JSON output of the last API request that occurred by the client.
+
+Larger changes are underway in the newly created "dev" branch where we are working on the following priorities:
+
+* Giving the option to remove formatting from output (this should allow for better scripted operations on the fly)
+* Adding support for Rackspace LON cloud environment
 
 <h2>Who am I and why should you use this client?</h2>
 
