@@ -6,9 +6,9 @@
 
 ## Define Global Variables Needed for API Comms ##
 
-Set-Variable -Name CloudUsername -Value "" -Scope Global
-Set-Variable -Name CloudAPIKey -Value "" -Scope Global
-Set-Variable -Name CloudDDI -Value "" -Scope Global
+Set-Variable -Name CloudUsername -Value "" -Scope Script
+Set-Variable -Name CloudAPIKey -Value "" -Scope Script
+Set-Variable -Name CloudDDI -Value "" -Scope Script
 
 ## Valid Rackspace Regions
 $RegionList = "DFW", "IAD", "HKG", "ORD", "SYD"
@@ -228,6 +228,51 @@ function Get-URI ($service, $region) {
 } 
 
 ## DEFINE FUNCTIONS
+
+## Hack for now to sync core with monitoring until refactoring can be copmleted.
+function Set-CoreAccountAuthentication
+{
+
+    param(
+        [Parameter(Position=0, Mandatory=$false)]
+        [string] $CloudUsername,
+        [Parameter(Position=0, Mandatory=$false)]
+        [string] $CloudAPIKey,
+        [Parameter(Position=0, Mandatory=$false)]
+        [string] $CloudDDI
+    )
+
+    $script:CloudUsername = $CloudUsername
+    $script:CloudAPIKey = $CloudAPIKey
+    $script:CloudDDI = $CloudDDI
+
+<#
+    .SYNOPSIS
+    (Re)Set the desired authentication credentials for the core module. 
+
+    .DESCRIPTION
+    (Re)Set the desired authentication credentials for the core module. This is a temporary solution while the core 
+    module is (or should be) refactored to use authentication mechanism.
+
+    .PARAMETER CloudUsername
+    The account username. Use -CloudUserName to set.
+
+    .PARAMETER CloudAPIKey
+    The account API key. Use -CloudAPIKey to set.
+
+    .PARAMETER CloudDDI
+    The CloudDDI variable is your account number or tenant ID. For Rackspace customers, this can be found at the top right 
+    of your screen when logged into the Rackspace Cloud Control Panel. Use -CloudDDI to set.
+
+    .EXAMPLE
+    Set-CoreAccountAuthentication -CloudUserName sampleUser
+    This example sets only the username. Similar usage can be achieved to set only the API Key or DDI.
+    
+    .EXAMPLE
+    Set-CoreAccountAuthentication -CloudUserName sampleUser -CloudAPIKey 1234567890 -CloudDDI 09876543
+    This example sets all three authentication credentials.  
+#>
+}
 
 ## Global API Call
 function Get-APIRequest {

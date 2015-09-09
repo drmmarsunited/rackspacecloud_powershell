@@ -1,11 +1,19 @@
 <h1>PowerClient - Rackspace Cloud API Powershell Client</h1>
 
-<h2> CRITICAL UPDATE</h2>
+<h2> Latest Update(s)</h2>
 
-As of July 16th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
+As of September 9th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
 
+* Cmdlets added for Rackspace Cloud Monitoring
 * Dynamic endpoint URL retrieval from service catalog returned with auth token
 * Cloud Server password resets now have their own cmdlet: Update-CloudServerPassword
+
+I have also introduced a global variable called "$Result" that will give you the raw JSON output of the last API request that occurred by the client.
+
+Larger changes are underway in the newly created "dev" branch where we are working on the following priorities:
+
+* Giving the option to remove formatting from output (this should allow for better scripted operations on the fly)
+* Adding support for Rackspace LON cloud environment
 
 <h2>Who am I and why should you use this client?</h2>
 
@@ -140,19 +148,14 @@ The way this script is built is as a Powershell module. Start by downloading as 
     
     a.	%UserProfile%\Documents\WindowsPowerShell\Modules
 
-For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above.  Once you’ve placed the folder in its new location, edit the “RSCloud.psm1” with Notepad (or you’re preferred text editor). In this file, the following lines need to be edited with you Rackspace cloud account information (place your information between the double quotes):
+For the sake of ease, place the “PowerClient” folder in the 2nd listed folder above. Once done, please invoke the following cmdlets to set the authentication for the program.
 
 ```Powershell
-
-## Define Global Variables Needed for API Comms ##
-
-Set-Variable -Name CloudUsername -Value "" -Scope Global
-Set-Variable -Name CloudAPIKey -Value "" -Scope Global
-Set-Variable -Name CloudDDI -Value "" -Scope Global
-## *The CloudDDI variable is your account number or tenant ID.  This can be found at the top right of your screen when logged into the Rackspace Cloud Control Panel*
+Set-AccountAuthentication -CloudUsername 'username' -CloudAPIKey 'key' -CloudDDI ddi
+Set-CoreAccountAuthentication -CloudUsername 'username' -CloudAPIKey 'key' -CloudDDI ddi
 ```
 
-After editing the file, please save it!  You can then launch Powershell, and run "Import-Module PowerClient". At this point, you should be able to run all the commands listed in the wiki (link below) at your leisure.
+Having to set two authentication commands prior to using the module is not ideal. Additional work will be done moving forward to simplify this process.
 
 <h2>Are there any other sources for information or tips for PowerClient?</h2>
 
