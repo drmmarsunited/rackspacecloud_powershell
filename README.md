@@ -1,6 +1,6 @@
 <h1>PowerClient - Rackspace Cloud API Powershell Client</h1>
 
-<h2> Latest Update(s)/h2>
+<h2> Latest Update(s)</h2>
 
 As of July 16th 2015, this client has been updated to use JSON requests ONLY.  All XML references have been removed at this time.  Several new updates have been introduced:
 
